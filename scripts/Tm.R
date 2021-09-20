@@ -32,15 +32,28 @@ entropy_range <- function(sequence, ...) {
     )
 }
 
+threeNDf <- "GGCAAGTCTGGTGCCAG"
+LR5 <- "TCCTGAGGGAAACTTCG"
 EF1_938f <- "GCYCCYGGHCAYCGTGAYTTYAT"
+EF1_938f2 <- "GCYCCIGGICAYCGTGAYTTYAT"
 EF1_2218r <- "ATGACACCRACRGCRACRGTYTG"
 RPB1_aAf <- "GAGTGTCCGGGGCATTTYGG"
 RPB1_aCr <- "ARAARTCBACHCGYTTBCCCAT"
 bRPB2_6F <- "TGGGGYATGGTITGYCCYGC"
 bRPB2_7R <- "GAYTGRTTRTGRTCRGGGAAVGG"
 fRPB2_5F <- "GAYGAYMGWGATCAYTTYGG"
+fRPB2_5F2 <- "GAYGAYIGIGAYCAYTTYGG"
 bRPB2_6R2 <- "GGRCAIACCATICCCCARTG"
-
-melt_range(RPB1_aCr, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
-enthalpy_range(bRPB2_6R2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
-entropy_range(bRPB2_6R2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
+bMCM7_F <- "TTYCARGARGTIAARATICARGARATGG"
+bMCM7_R <- "TCCATYTTRTCRAAYTCRTC"
+MCM7_709for <- "ACIMGIGTITCVGAYGTHAARCC"
+MCM7_16r <- "GTYTGYTGYTCCATIACYTCRTG"
+Bsens <- "ATYACICAYTCIYTIGGTGG"
+Bsens2 <- "ATCACWCACTCICTIGGTGG"
+Brev <- "CATGAAGAARTGIAGACGIGG"
+Brev2 <- "AARAARTGIAGSCGIGGGAAIGG"
+melt_range(threeNDf, nucleic.acid.conc = 100e-9, hybridisation.type = "dnadna", Na.conc=1)
+c(enthalpy_range(EF1_938f2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005),
+entropy_range(EF1_938f2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005))[c(1,3,2,4)] |>
+    paste(collapse=" ") |>
+    chartr(old=".", new = ",")
