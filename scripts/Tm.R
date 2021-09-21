@@ -81,7 +81,6 @@ entropy_range <- function(sequence, ...) {
     )
 }
 
-
 thermo_range <- function(sequence, name = "", ...) {
     if (length(sequence) == 1) {
         stopifnot(length(name) == 1)
@@ -106,16 +105,46 @@ thermo_range <- function(sequence, name = "", ...) {
     }
 }
 
-thermo_data <- function(sequ)
+thermo_data <- function(sequ) {}
 
+threeNDf <- "GGCAAGTCTGGTGCCAG"
+LR5 <- "TCCTGAGGGAAACTTCG"
 EF1_938f <- "GCYCCYGGHCAYCGTGAYTTYAT"
+EF1_938f2 <- "GCYCCIGGICAYCGTGAYTTYAT"
 EF1_2218r <- "ATGACACCRACRGCRACRGTYTG"
 RPB1_aAf <- "GAGTGTCCGGGGCATTTYGG"
 RPB1_aCr <- "ARAARTCBACHCGYTTBCCCAT"
+gRPB1_A_for <- "GAKTGTCCKGGWCATTTTGG"
+fRPB1_C_rev <- "CIGCDATITCRTTRTCCATRTA"
 bRPB2_6F <- "TGGGGYATGGTITGYCCYGC"
 bRPB2_7R <- "GAYTGRTTRTGRTCRGGGAAVGG"
 fRPB2_5F <- "GAYGAYMGWGATCAYTTYGG"
+fRPB2_5F2 <- "GAYGAYIGIGAYCAYTTYGG"
 bRPB2_6R2 <- "GGRCAIACCATICCCCARTG"
+bMCM7_F <- "TTYCARGARGTIAARATICARGARATGG"
+bMCM7_R <- "TCCATYTTRTCRAAYTCRTC"
+MCM7_709for <- "ACIMGIGTITCVGAYGTHAARCC"
+MCM7_16r <- "GTYTGYTGYTCCATIACYTCRTG"
+Bsens <- "ATYACICAYTCIYTIGGTGG"
+Bsens2 <- "ATCACWCACTCICTIGGTGG"
+Brev <- "CATGAAGAARTGIAGACGIGG"
+Brev2 <- "AARAARTGIAGSCGIGGGAAIGG"
+
+bMCM7_F_tagF <- "ACGACGTTGTAAAATTYCARGARGTIAARATICARGARATGG"
+bMCM7_R_tagR <- "CATTAAGTTCCCATTATCCATYTTRTCRAAYTCRTC"
+MCM7_709for_tagF <- "ACGACGTTGTAAAAACIMGIGTITCVGAYGTHAARCC"
+MCM7_16r_tagR <- "CATTAAGTTCCCATTAGTYTGYTGYTCCATIACYTCRTG"
+fRPB2_5F2_tagF <- "ACGACGTTGTAAAAGAYGAYIGIGAYCAYTTYGG"
+bRPB2_7R_tagR <- "CATTAAGTTCCCATTAGAYTGRTTRTGRTCRGGGAAVGG"
+gRPB1_A_for_tagF <- "ACGACGTTGTAAAAGAKTGTCCKGGWCATTTTGG"
+fRPB1_C_rev_tagR <- "CATTAAGTTCCCATTACIGCDATITCRTTRTCCATRTA"
+EF1_938f_tagF <- "ACGACGTTGTAAAAGCYCCYGGHCAYCGTGAYTTYAT"
+EF1_938f2_tagF <- "ACGACGTTGTAAAAGCYCCIGGICAYCGTGAYTTYAT"
+EF1_2218r_tagR <- "CATTAAGTTCCCATTAATGACACCRACRGCRACRGTYTG"
+Bsens_tagF <- "ACGACGTTGTAAAAATYACICAYTCIYTIGGTGG"
+Bsens2_tagF <- "ACGACGTTGTAAAAATCACWCACTCICTIGGTGG"
+Brev_tagR <- "CATTAAGTTCCCATTACATGAAGAARTGIAGACGIGG"
+Brev2_tagR <- "CATTAAGTTCCCATTAAARAARTGIAGSCGIGGGAAIGG"
 
 min_comp(EF1_2218r)
 
@@ -129,3 +158,10 @@ purrr::pmap_dfr(oneoff_min(EF1_2218r), function(...) melting(...)$Results,
                 nucleic.acid.conc = 4, hybridisation.type = "dnadna", Na.conc=1) |>
     dplyr::arrange(`Enthalpy (J)` / `Entropy (J)`) |>
     dplyr::slice(1)
+
+melt_range(threeNDf, nucleic.acid.conc = 100e-9, hybridisation.type = "dnadna", Na.conc=1)
+c(enthalpy_range(Brev2_tagR, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005),
+entropy_range(Brev2_tagR, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005))[c(1,3,2,4)] |>
+    paste(collapse="\t") |>
+    chartr(old=".", new = ",") |>
+    cat()
