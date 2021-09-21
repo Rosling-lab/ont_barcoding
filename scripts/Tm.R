@@ -31,18 +31,6 @@ mismatch_bases <- list(
     I = character()
 )
 
-oneoff_min <- function(sequence, n = NULL) {
-    if (is.null(n)) {
-        purrr::map_dfr(seq_len(nchar(sequence)), oneoff_min, sequence = sequence)
-    } else {
-        expand.grid(
-            sequence = glue::glue("{min_replace(substr(sequence, 0, n-1))}{expand_bases[[substr(sequence, n, n)]]}{min_replace(substr(sequence, n+1, nchar(sequence)+1))}"),
-            comp.sequence = glue::glue("{min_comp(substr(sequence, 0, n-1))}{mismatch_bases[[substr(sequence, n, n)]]}{min_comp(substr(sequence, n+1, nchar(sequence)+1))}"),
-            stringsAsFactors = FALSE
-        )
-    }
-}
-
 expand_bases = list(
     A = "A",
     C = "C",
@@ -61,6 +49,105 @@ expand_bases = list(
     N = c("A", "C", "G", "T"),
     I = "I"
 )
+
+
+oneoff_min <- function(sequence, n = NULL) {
+    if (is.null(n)) {
+        purrr::map_dfr(seq_len(nchar(sequence)), oneoff_min, sequence = sequence)
+    } else {
+        expand.grid(
+            sequence = glue::glue("{min_replace(substr(sequence, 0, n-1))}{expand_bases[[substr(sequence, n, n)]]}{min_replace(substr(sequence, n+1, nchar(sequence)+1))}"),
+            comp.sequence = glue::glue("{min_comp(substr(sequence, 0, n-1))}{mismatch_bases[[substr(sequence, n, n)]]}{min_comp(substr(sequence, n+1, nchar(sequence)+1))}"),
+            stringsAsFactors = FALSE
+        )
+    }
+}
+one_alt_min <- function(sequence, n = NULL, ...) {
+    (
+        if (is.null(n)) {
+            purrr::map_dfr(seq_len(nchar(sequence)), one_alt_min, sequence = sequence, ...) |>
+                dplyr::distinct()
+        } else {
+            alternatives <- expand_bases[[substr(sequence, n, n)]]
+            (
+                if (length(alternatives) < 2) {
+                    data.frame(
+                        sequence = min_replace(sequence),
+                        comp.sequence = min_comp(sequence),
+                        stringsAsFactors = FALSE
+                    )
+                } else {
+                    expand.grid(
+                        base = alternatives,
+                        comp = min_comp(alternatives),
+                        stringsAsFactors = FALSE
+                    ) |>
+                        dplyr::filter(comp != min_comp(base)) |>
+                        dplyr::transmute(
+                            sequence = paste0(
+                                min_replace(substr(sequence, 0, n-1)),
+                                base,
+                                min_replace(substr(sequence, n+1, nchar(sequence)+1))
+                            ),
+                            comp.sequence = paste0(
+                                min_comp(substr(sequence, 0, n-1)),
+                                comp,
+                                min_comp(substr(sequence, n+1, nchar(sequence)+1))
+                            )
+                        )
+                }
+            ) |>
+                purrr::pmap(melting, hybridisation.type = "dnadna", ...) |>
+                purrr::map_dfr("Results")
+        }
+    ) |>
+        dplyr::arrange(`Enthalpy (J)` / `Entropy (J)`) |>
+        dplyr::slice(1)
+}
+
+one_alt_max <- function(sequence, n = NULL, ...) {
+    (
+        if (is.null(n)) {
+            purrr::map_dfr(seq_len(nchar(sequence)), one_alt_max, sequence = sequence, ...) |>
+                dplyr::distinct()
+        } else {
+            alternatives <- expand_bases[[substr(sequence, n, n)]]
+            (
+                if (length(alternatives) < 2) {
+                    data.frame(
+                        sequence = max_replace(sequence),
+                        comp.sequence = max_comp(sequence),
+                        stringsAsFactors = FALSE
+                    )
+                } else {
+                    expand.grid(
+                        base = alternatives,
+                        comp = max_comp(alternatives),
+                        stringsAsFactors = FALSE
+                    ) |>
+                        dplyr::filter(comp != max_comp(base)) |>
+                        dplyr::transmute(
+                            sequence = paste0(
+                                max_replace(substr(sequence, 0, n-1)),
+                                base,
+                                max_replace(substr(sequence, n+1, nchar(sequence)+1))
+                            ),
+                            comp.sequence = paste0(
+                                max_comp(substr(sequence, 0, n-1)),
+                                comp,
+                                max_comp(substr(sequence, n+1, nchar(sequence)+1))
+                            )
+                        )
+                }
+            ) |>
+                purrr::pmap(melting, hybridisation.type = "dnadna", ...) |>
+                purrr::map_dfr("Results")
+        }
+    ) |>
+        dplyr::arrange(dplyr::desc(`Enthalpy (J)` / `Entropy (J)`)) |>
+        dplyr::slice(1)
+}
+
 melt_range <- function(sequence, ...) {
     c(
         min = melting(min_replace(sequence), comp.sequence = min_comp(sequence), ...)$Results$`Melting temperature (C)`,
@@ -146,22 +233,31 @@ Bsens2_tagF <- "ACGACGTTGTAAAAATCACWCACTCICTIGGTGG"
 Brev_tagR <- "CATTAAGTTCCCATTACATGAAGAARTGIAGACGIGG"
 Brev2_tagR <- "CATTAAGTTCCCATTAAARAARTGIAGSCGIGGGAAIGG"
 
-min_comp(EF1_2218r)
-
 melting(min_replace(EF1_2218r), "TACTGTGGTTGTCGTTGTCAAAC", nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
-melt_range(RPB1_aCr, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
+melt_range(Bsens, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
 enthalpy_range(bRPB2_6R2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
 entropy_range(bRPB2_6R2, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
 thermo_range(c(fRPB2_5F, bRPB2_6R2), c("fRPB2-5F", "bRPB2-6R2"),
              nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005)
 purrr::pmap_dfr(oneoff_min(EF1_2218r), function(...) melting(...)$Results,
-                nucleic.acid.conc = 4, hybridisation.type = "dnadna", Na.conc=1) |>
+                nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005) |>
     dplyr::arrange(`Enthalpy (J)` / `Entropy (J)`) |>
     dplyr::slice(1)
 
+one_alt_min(Bsens_tagF, nucleic.acid.conc = 500e-9, Mg.conc=0.005)
+
 melt_range(threeNDf, nucleic.acid.conc = 100e-9, hybridisation.type = "dnadna", Na.conc=1)
+
 c(enthalpy_range(Brev2_tagR, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005),
 entropy_range(Brev2_tagR, nucleic.acid.conc = 500e-9, hybridisation.type = "dnadna", Mg.conc=0.005))[c(1,3,2,4)] |>
+    paste(collapse="\t") |>
+    chartr(old=".", new = ",") |>
+    cat()
+
+c(
+    one_alt_min(Brev2_tagR, nucleic.acid.conc = 500e-9, Mg.conc=0.005)[3:4] |> unlist(),
+    one_alt_max(Brev2_tagR, nucleic.acid.conc = 500e-9, Mg.conc=0.005)[3:4] |> unlist()
+) |>
     paste(collapse="\t") |>
     chartr(old=".", new = ",") |>
     cat()
