@@ -1,0 +1,2 @@
+primers.xlsx filter=lfs diff=lfs merge=lfs -text
+fruitbody_mlst_primers.xlsx filter=lfs diff=lfs merge=lfs -text
