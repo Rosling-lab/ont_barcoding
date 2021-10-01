@@ -17,7 +17,9 @@ def get_reads(wildcards):
     return glob(f"data/reads/barcode{wildcards.i}/*.fastq.gz")
 
 rule demultiplex:
-    output: "data/demultiplex/barcode{i}/barcode{i}.summary"
+    output:
+        summary = "data/demultiplex/barcode{i}/barcode{i}.summary",
+        unknowns = "data/demultiplex/barcode{i}/unknown.fastq.gz"
     input:
         reads = get_reads,
         tags = "tags/barcode{i}.fasta"
@@ -30,5 +32,21 @@ rule demultiplex:
         zcat {input.reads} |
         cutadapt -m 400 -o - - |
         cutadapt -g file:{input.tags} --revcomp -o {params.outdir}/{{name}}.fastq.gz -j0 - >{log}
-        grep -B2 "[Tt]rimmed: [^0]" {log} >{output}
+        grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
+        """
+
+rule demultiplex_single:
+    output:
+        summary = "data/demultiplex/barcode{i}/single/barcode{i}.summary"
+    input:
+        reads = "data/demultiplex/barcode{i}/unknown.fastq.gz",
+        tags = "tags/barcode{i}_single.fasta"
+    params:
+        outdir = "data/demultiplex/barcode{i}/single"
+    log: "logs/demux_single_barcode{i}.log"
+    shell:
+        """
+        mkdir -p {params.outdir}
+        cutadapt -g file:{input.tags} --revcomp -o {params.outdir}/{{name}}.fastq.gz -j0 {input.reads} >{log}
+        grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
         """

@@ -31,10 +31,10 @@ platekey <- dplyr::left_join(
 
 samplekeys <- list()
 for (i in 1:12) {
-    f <- sprintf("data/reads/barcode%02d.xlsx", i)
+    f <- sprintf("data/samples/barcode%02d.xlsx", i)
     if (file.exists(f)) {
         samplekeys[[i]] <-
-            readxl::read_xlsx(f, range = "A1:L8", col_names = as.character(1:12),
+            readxl::read_xlsx(f, range = "B2:M9", col_names = as.character(1:12),
                           col_types = "text") |>
             dplyr::mutate(row = LETTERS[1:8]) |>
             tidyr::pivot_longer(
@@ -43,14 +43,6 @@ for (i in 1:12) {
                 values_to = "sample"
             ) |>
             dplyr::left_join(platekey, by = c("row", "col"))
-        samplekeys[[i]] %$%
-            stringi::stri_replace_all_fixed(
-                rDNA_tags,
-                paste0(">", tagname),
-                paste0(">", dplyr::coalesce(sample, tagname)),
-                vectorize_all = FALSE
-            ) |>
-            writeLines(sprintf("tags/barcode%02d.fasta", i))
         samplekeys[[i]] %$%
             stringi::stri_replace_all_fixed(
                 rDNA_tags,
