@@ -3,7 +3,7 @@ name: ont_barcoding_tags
 channels:
   - bioconda
   - conda-forge
-requirements:
+dependencies:
   - r-base=4.1
   - r-magrittr
   - r-tibble

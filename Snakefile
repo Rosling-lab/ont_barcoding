@@ -5,16 +5,26 @@
 import subprocess
 from glob import glob
 import re
+import snakemake
 
 # Find the maximum number of cores available to a single node on SLURM,
 # or if we aren't in a SLURM environment, how many we have on the local machine.
 try:
     maxthreads = max([int(x) for x in re.findall(r'\d+', subprocess.check_output(["sinfo", "-O", "cpus"]).decode())])
 except FileNotFoundError:
-    maxthreads = int(subprocess.check_output("nproc").decode())
+    maxthreads = snakemake.utils.available_cpu_count()
 
 def get_reads(wildcards):
     return glob(f"data/reads/barcode{wildcards.i}/*.fastq.gz")
+
+rule all:
+    input:
+        expand("data/demultiplex/barcode{i}/barcode{i}.summary",
+            i = [n[1][0] for n in snakemake.utils.listfiles("samples/barcode{i}.xlsx")]),
+        expand("data/demultiplex/barcode{i}/single/barcode{i}.summary",
+            i = [n[1][0] for n in snakemake.utils.listfiles("tags/barcode{i}_single.fasta")]),
+
+
 
 # generate barcoding tag files for generic plates
 rule plate_tags:
@@ -27,7 +37,7 @@ rule plate_tags:
         script = "scripts/tags.R"
     conda: "conda/tags.yaml"
     threads: 1
-    script: "{input.script}"
+    script: "scripts/tags.R"
 
 # generate barcoding tag files for labeled samples
 rule sample_tags:
@@ -41,7 +51,7 @@ rule sample_tags:
         script = "scripts/tags.R"
     conda: "conda/tags.yaml"
     threads: 1
-    script: "{input.script}"
+    script: "scripts/tags.R"
 
 
 rule demultiplex:
@@ -55,6 +65,7 @@ rule demultiplex:
         outdir = "data/demultiplex/barcode{i}"
     log: "logs/demux_barcode{i}.log"
     threads: maxthreads
+    conda: "conda/demultiplex.yaml"
     shell:
         """
         mkdir -p {params.outdir}
@@ -80,6 +91,7 @@ rule demultiplex_single:
         outdir = "data/demultiplex/barcode{i}/single"
     log: "logs/demux_single_barcode{i}.log"
     threads: maxthreads
+    conda: "conda/demultiplex.yaml"
     shell:
         """
         mkdir -p {params.outdir}

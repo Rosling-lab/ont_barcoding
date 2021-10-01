@@ -1,0 +1,6 @@
+name: ont_demultiplex
+channels:
+ - bioconda
+ - conda-forge
+dependencies:
+ - cutadapt=3.4
