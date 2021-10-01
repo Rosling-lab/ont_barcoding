@@ -1,5 +1,5 @@
 # Snakemake workflow file
-# This workflow demultiplexes custom inner MinION plates.
+# This workflow demultiplexes custom "inner" barcodes from MinION plates.
 # The intention is for "quick" checks during sequencing runs.
 
 import subprocess
@@ -16,6 +16,34 @@ except FileNotFoundError:
 def get_reads(wildcards):
     return glob(f"data/reads/barcode{wildcards.i}/*.fastq.gz")
 
+# generate barcoding tag files for generic plates
+rule plate_tags:
+    output:
+        tags_ITS1 = "tags/ITS1_tags.fasta",
+        tags_3NDf_LR5 = "tags/3NDf_LR5_tags.fasta"
+    input:
+        tags_3NDf = "tags/3NDf_barcodes.fasta",
+        tags_ITS1_LR5 = "tags/its1_lr5_barcodes.fasta",
+        script = "scripts/tags.R"
+    conda: "conda/tags.yaml"
+    threads: 1
+    script: "{input.script}"
+
+# generate barcoding tag files for labeled samples
+rule sample_tags:
+    output:
+        sample_tags = "tags/barcode{i}.fasta"
+    input:
+        tags_3NDf = "tags/3NDf_barcodes.fasta",
+        tags_ITS1_LR5 = "tags/its1_lr5_barcodes.fasta",
+        tag_plate = "tags/3NDf-LR5_tagplate.xlsx",
+        sample_plate = "samples/barcode{i}.xlsx",
+        script = "scripts/tags.R"
+    conda: "conda/tags.yaml"
+    threads: 1
+    script: "{input.script}"
+
+
 rule demultiplex:
     output:
         summary = "data/demultiplex/barcode{i}/barcode{i}.summary",
@@ -26,12 +54,19 @@ rule demultiplex:
     params:
         outdir = "data/demultiplex/barcode{i}"
     log: "logs/demux_barcode{i}.log"
+    threads: maxthreads
     shell:
         """
         mkdir -p {params.outdir}
         zcat {input.reads} |
-        cutadapt -m 400 -o - - |
-        cutadapt -g file:{input.tags} --revcomp -o {params.outdir}/{{name}}.fastq.gz -j0 - >{log}
+        cutadapt -m 400\
+                 -o - - |
+        cutadapt -g file:{input.tags}\
+                 --revcomp\
+                 -o {params.outdir}/{{name}}.fastq.gz\
+                 -j {threads}\
+                 -\
+                 >{log}
         grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
         """
 
@@ -44,9 +79,15 @@ rule demultiplex_single:
     params:
         outdir = "data/demultiplex/barcode{i}/single"
     log: "logs/demux_single_barcode{i}.log"
+    threads: maxthreads
     shell:
         """
         mkdir -p {params.outdir}
-        cutadapt -g file:{input.tags} --revcomp -o {params.outdir}/{{name}}.fastq.gz -j0 {input.reads} >{log}
+        cutadapt -g file:{input.tags}\
+                 --revcomp\
+                 -o {params.outdir}/{{name}}.fastq.gz\
+                 -j {threads}\
+                 {input.reads}\
+                 >{log}
         grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
         """
