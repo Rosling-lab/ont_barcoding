@@ -13,18 +13,23 @@ if (exists("snakemake")) {
   tags_ITS1 <- snakemake@output$tags_ITS1
   tags_3NDf_LR5 <- snakemake@output$tags_3NDf_LR5
   sample_tags <- snakemake@output$sample_tags
+  sample_names <- snakemake@output$sample_names
 } else {
   # defaults without Snakemake
   tags_3NDf <- "tags/3NDf_barcodes.fasta"
   tags_ITS1_LR5 <- "tags/its1_lr5_barcodes.fasta"
   tag_plate <- "tags/3NDf-LR5_tagplate.xlsx"
-  sample_plate <- list.files("samples", "barcode[0-9]+\\.xlsx")
+  sample_plate <- list.files("samples", "barcode[0-9]+\\.xlsx", full.names = TRUE)
 
   tags_ITS1 <- "tags/ITS1_tags.fasta"
   tags_3NDf_LR5 <- "tags/3NDf_LR5_tags.fasta"
   sample_tags <- file.path(
     "tags",
     sub("xlsx$", "fasta", basename(sample_plate))
+  )
+  sample_names <- file.path(
+    "samples",
+    sub("xlsx$", "txt", basename(sample_plate))
   )
 }
 
@@ -76,7 +81,7 @@ if (!is.null(tag_plate)) {
 
 
   for (i in seq_along(sample_plate)) {
-    readxl::read_xlsx(
+    sample_data <- readxl::read_xlsx(
       sample_plate[i],
       range = "B2:M9",
       col_names = as.character(1:12),
@@ -88,7 +93,8 @@ if (!is.null(tag_plate)) {
         names_to = "col",
         values_to = "sample"
       ) |>
-      dplyr::left_join(platekey, by = c("row", "col")) %$%
+      dplyr::left_join(platekey, by = c("row", "col"))
+    sample_data %$%
       stringi::stri_replace_all_fixed(
         rDNA_tags,
         paste0(">", tagname),
@@ -96,5 +102,8 @@ if (!is.null(tag_plate)) {
         vectorize_all = FALSE
       ) |>
       writeLines(sample_tags[i])
+    sample_data$sample |>
+      purrr::discard(is.na) |>
+      writeLines(sample_names[i])
   }
 }
