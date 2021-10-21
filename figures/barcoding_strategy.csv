@@ -1,0 +1,22 @@
+x,y,xend,yend,color,linetype,size,label,labelcolor,y_label,size_label,arrow
+1,0,1000,0,black,solid,6,Target amplicon,black,5,5,FALSE
+-100,0,0,0,tomato,solid,6,"Fwd
+primer",tomato,5,5,FALSE
+1001,0,1100,0,steelblue,solid,6,"Rev
+Primer",steelblue,5,5,FALSE
+-200,0,-101,0,darkgreen,solid,6,"Fwd
+Index",darkgreen,-5,5,FALSE
+1101,0,1200,0,orchid,solid,6,"Rev
+Index",orchid,-5,5,FALSE
+1,-20,1000,-20,black,solid,6,,black,4,5,FALSE
+-100,-20,0,-20,tomato,solid,6,,tomato,4,5,FALSE
+1001,-20,1100,-20,steelblue,solid,6,,steelblue,4,5,FALSE
+-200,-20,-101,-20,darkgreen,solid,6,,darkgreen,-4,5,FALSE
+1101,-20,1200,-20,orchid,solid,6,,orchid,-4,5,FALSE
+-300,-20,-201,-20,aquamarine3,solid,6,"Native
+barcode",aquamarine3,-15,5,FALSE
+1201,-20,1300,-20,aquamarine3,solid,6,"Native
+barcode",aquamarine3,-15,5,FALSE
+-400,-20,-301,-20,maroon,solid,6,Adapter,maroon,-23,5,FALSE
+1301,-20,1400,-20,maroon,solid,6,Adapter,maroon,-23,5,FALSE
+500,-5,500,-12.5,black,solid,10,,black,,,TRUE
