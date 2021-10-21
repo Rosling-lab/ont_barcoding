@@ -3,3 +3,8 @@
 .RData
 .Ruserdata
 .~lock*
+.idea
+.snakemake
+alignments
+data
+logs
