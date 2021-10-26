@@ -1,0 +1,15 @@
+# conda environment to run scripts/tags.R
+name: ont_barcoding_tags
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - r-base=4.1
+  - r-magrittr
+  - r-tibble
+  - r-dplyr
+  - r-tidyr
+  - r-glue
+  - r-readxl
+  - r-stringi
+  - bioconductor-biostrings
