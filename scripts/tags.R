@@ -10,9 +10,12 @@ if (exists("snakemake")) {
 
   # output files
   # (some may be NULL)
-  tags_ITS1 <- snakemake@output$tags_ITS1
-  tags_3NDf_LR5 <- snakemake@output$tags_3NDf_LR5
-  sample_tags <- snakemake@output$sample_tags
+  tags_ITS1_fasta <- snakemake@output$tags_ITS1_fasta
+  tags_ITS1_table <- snakemake@output$tags_ITS1_table
+  tags_3NDf_LR5_fasta <- snakemake@output$tags_3NDf_LR5_fasta
+  tags_3NDf_LR5_table <- snakemake@output$tags_3NDf_LR5_table
+  sample_tags_fasta <- snakemake@output$sample_tags_fasta
+  sample_tags_table <- snakemake@output$sample_tags_table
   sample_names <- snakemake@output$sample_names
 } else {
   # defaults without Snakemake
@@ -21,11 +24,17 @@ if (exists("snakemake")) {
   tag_plate <- "tags/3NDf-LR5_tagplate.xlsx"
   sample_plate <- list.files("samples", "barcode[0-9]+\\.xlsx", full.names = TRUE)
 
-  tags_ITS1 <- "tags/ITS1_tags.fasta"
-  tags_3NDf_LR5 <- "tags/3NDf_LR5_tags.fasta"
-  sample_tags <- file.path(
+  tags_ITS1_fasta <- "tags/ITS1_tags.fasta"
+  tags_ITS1_table <- "tags/ITS1_tags.tsv"
+  tags_3NDf_LR5_fasta <- "tags/3NDf_LR5_tags.fasta"
+  tags_3NDf_LR5_table <- "tags/3NDf_LR5_tags.tsv"
+  sample_tags_fasta <- file.path(
     "tags",
     sub("xlsx$", "fasta", basename(sample_plate))
+  )
+  sample_tags_table <- file.path(
+    "tags",
+    sub("xlsx$", "tsv", basename(sample_plate))
   )
   sample_names <- file.path(
     "samples",
@@ -33,28 +42,108 @@ if (exists("snakemake")) {
   )
 }
 
+# read the files containing the barcodes
 barcodes <- Biostrings::readDNAStringSet(tags_ITS1_LR5)
-its1 <- barcodes[startsWith(names(barcodes), "its1")]
-lr5 <- barcodes[startsWith(names(barcodes), "lr5")] |>
-  Biostrings::reverseComplement()
-threeNDf <- Biostrings::readDNAStringSet(tags_3NDf)
+seq_ITS1 <- barcodes[startsWith(names(barcodes), "its1")]
+seq_LR5 <- barcodes[startsWith(names(barcodes), "lr5")]
+seq_3NDf <- Biostrings::readDNAStringSet(tags_3NDf)
 
-if (!is.null(tags_ITS1)) {
-  Biostrings::writeXStringSet(its1, tags_ITS1)
+# functions to remove common prefix and suffix
+remove_lcsuffix <- function(seq) {
+  lcs <- Biobase::lcSuffix(seq)
+  sub(paste0(lcs, "$"), "", seq)
 }
 
-rDNA_tags <-
-    tidyr::expand_grid(
-  fwd = tibble::enframe(as.character(threeNDf)),
-  rev = tibble::enframe(as.character(lr5))
-) |>
+remove_lcprefix <- function(seq) {
+  lcp <- Biobase::lcPrefix(seq)
+  sub(paste0("^", lcp), "", seq)
+}
+
+# make a data frame for each tag set:
+# name = name,
+# seq = full sequence,
+# revcomp = reverse complement of full sequence
+# tag = only barcoding tag sequence
+# primer = only primer sequence
+enframe_tags <- function(tags) {
+  revcomp <- as.character(Biostrings::reverseComplement(tags))
+  tags <- as.character(tags)
+  primer <- Biobase::lcSuffix(tags)
+  tags |>
+    tibble::enframe(value = "seq") |>
+    dplyr::mutate(
+      tag = seq |>
+        remove_lcsuffix() |> #remove the primer
+        remove_lcprefix(), #remove the "pad", if any
+      primer = primer,
+      revcomp = revcomp
+    )
+}
+
+tagset_3NDf <- enframe_tags(seq_3NDf)
+tagset_LR5 <- enframe_tags(seq_LR5)
+tagset_ITS1 <- enframe_tags(seq_ITS1)
+
+# find the minimum edit distance between tags in a tag set
+mindist <- function(tags) {
+  adist(tags$tag) |>
+  purrr::keep(~.>0) |>
+  min()
+}
+
+mindist(tagset_3NDf) # 5
+mindist(tagset_LR5) # 7
+mindist(tagset_ITS1) # 7
+
+# make a set of tags in cutadapt fasta format for 3NDf--LR5
+
+rDNA_tags_cutadapt <-
+  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) |>
   tidyr::unpack(c("fwd", "rev"), names_sep = "_") |>
-  glue::glue_data(">{fwd_name}_{rev_name}\n{fwd_value}...{rev_value}")
+  glue::glue_data(">{fwd_name}_{rev_name}\n{fwd_seq}...{rev_revcomp}")
 
-if (!is.null(tags_3NDf_LR5)) {
-  writeLines(rDNA_tags, tags_3NDf_LR5)
+# make a set of tags in minibar table format for 3NDf--LR5
+rDNA_tags_minibar <-
+  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) |>
+  tidyr::unpack(c("fwd", "rev"), names_sep = "_") |>
+  dplyr::select(fwd_name, rev_name, fwd_tag, fwd_primer, rev_tag, rev_primer) |>
+  tidyr::unite("name", c(fwd_name, rev_name))
+
+# ITS(1) is already in a fine format for cutadapt,
+# which can do single-end demultiplexing
+
+# make a set of tags in minibar table format for ITS1-ITS4
+# pretend that the ITS4 is a tag (with only one variant) with no primer
+
+ITS_tags_minibar <-
+  tibble::enframe(as.character(seq_ITS1)) |>
+  dplyr::transmute(
+    name = name,
+    fwd_tag = remove_lcsuffix(value),
+    fwd_primer = Biobase::lcSuffix(value),
+    rev_tag = "GCATATCAATAAGCGGAGGA",
+    rev_primer = ""
+  )
+
+# write out the tags; in this form they are not designed for a specific plate
+# layout.
+
+if (!is.null(tags_ITS1_fasta)) {
+  Biostrings::writeXStringSet(seq_ITS1, tags_ITS1_fasta)
+}
+if (!is.null(tags_ITS1_table)) {
+  write.table(ITS_tags_minibar, tags_ITS1_table, sep = "\t", row.names = FALSE)
 }
 
+if (!is.null(tags_3NDf_LR5_fasta)) {
+  writeLines(rDNA_tags_cutadapt, tags_3NDf_LR5_fasta)
+}
+
+if (!is.null(tags_3NDf_LR5_table)) {
+  write.table(rDNA_tags_minibar, tags_3NDf_LR5_table, sep = "\t", row.names = FALSE)
+}
+
+# if we have a plate, then convert tag (pairs) to wells
 if (!is.null(tag_plate)) {
   platekey <- dplyr::left_join(
     readxl::read_xlsx(
@@ -79,7 +168,7 @@ if (!is.null(tag_plate)) {
   ) |>
     dplyr::mutate(tagname = glue::glue("3NDf_bc{`3NDf`}_lr5_{LR5}"))
 
-
+# convert wells to samples for each plate
   for (i in seq_along(sample_plate)) {
     sample_data <- readxl::read_xlsx(
       sample_plate[i],
@@ -96,12 +185,24 @@ if (!is.null(tag_plate)) {
       dplyr::left_join(platekey, by = c("row", "col"))
     sample_data %$%
       stringi::stri_replace_all_fixed(
-        rDNA_tags,
+        rDNA_tags_cutadapt,
         paste0(">", tagname),
         paste0(">", dplyr::coalesce(sample, tagname)),
         vectorize_all = FALSE
       ) |>
-      writeLines(sample_tags[i])
+      writeLines(sample_tags_fasta[i])
+
+    sample_data |>
+      dplyr::left_join(rDNA_tags_minibar, by = c("tagname" = "name")) |>
+      dplyr::transmute(
+        name = dplyr::coalesce(sample, tagname),
+        fwd_tag = fwd_tag,
+        fwd_primer = fwd_primer,
+        rev_tag = rev_tag,
+        rev_primer = rev_primer
+      ) |>
+      write.table(sample_tags_table[i], sep = "\t", row.names = FALSE)
+
     sample_data$sample |>
       purrr::discard(is.na) |>
       writeLines(sample_names[i])

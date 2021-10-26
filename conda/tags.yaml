@@ -13,3 +13,4 @@ dependencies:
   - r-readxl
   - r-stringi
   - bioconductor-biostrings
+  - bioconductor-biobase

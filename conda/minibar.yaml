@@ -1,0 +1,8 @@
+name: minibar-demultiplex
+channels:
+ - bioconda
+ - conda-forge
+dependencies:
+ - pip=21.3.1
+ - pip:
+   - edlib

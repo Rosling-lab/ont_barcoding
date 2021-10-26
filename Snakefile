@@ -44,8 +44,10 @@ rule all:
 # generate barcoding tag files for generic plates
 rule plate_tags:
     output:
-        tags_ITS1 = "tags/ITS1_tags.fasta",
-        tags_3NDf_LR5 = "tags/3NDf_LR5_tags.fasta"
+        tags_ITS1_fasta = "tags/ITS1_tags.fasta",
+        tags_3NDf_LR5_fasta = "tags/3NDf_LR5_tags.fasta",
+        tags_ITS1_table = "tags/ITS1_tags.tsv",
+        tags_3NDf_LR5_table = "tags/3NDf_LR5_tags.tsv"
     input:
         tags_3NDf = "tags/3NDf_barcodes.fasta",
         tags_ITS1_LR5 = "tags/its1_lr5_barcodes.fasta",
@@ -60,7 +62,8 @@ wildcard_constraints:
 # generate barcoding tag files for labeled samples
 checkpoint sample_tags:
     output:
-        sample_tags = "tags/barcode{i}.fasta",
+        sample_tags_fasta = "tags/barcode{i}.fasta",
+        sample_tags_table = "tags/barcode{i}.tsv",
         sample_names = "samples/barcode{i}.txt"
     input:
         tags_3NDf = "tags/3NDf_barcodes.fasta",
