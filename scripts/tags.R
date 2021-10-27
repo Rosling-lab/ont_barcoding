@@ -113,7 +113,8 @@ rDNA_tags_minibar <-
 # which can do single-end demultiplexing
 
 # make a set of tags in minibar table format for ITS1-ITS4
-# pretend that the ITS4 is a tag (with only one variant) with no primer
+# pretend that half the ITS4 is a tag (with only one variant)
+# and half is the primer
 
 ITS_tags_minibar <-
   tibble::enframe(as.character(seq_ITS1)) |>
@@ -121,8 +122,8 @@ ITS_tags_minibar <-
     name = name,
     fwd_tag = remove_lcsuffix(value),
     fwd_primer = Biobase::lcSuffix(value),
-    rev_tag = "GCATATCAATAAGCGGAGGA",
-    rev_primer = ""
+    rev_tag = "GCATATCAAT",
+    rev_primer = "AAGCGGAGGA"
   )
 
 # write out the tags; in this form they are not designed for a specific plate
