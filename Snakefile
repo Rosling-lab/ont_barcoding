@@ -75,17 +75,17 @@ checkpoint sample_tags:
     threads: 1
     script: "scripts/tags.R"
 
-checkpoint demultiplex:
+checkpoint demultiplex_cutadapt:
     output:
-        summary = "data/demultiplex/barcode{i}/barcode{i}.summary",
-        unknowns = "data/demultiplex/barcode{i}/unknown.fastq.gz"
+        summary = "data/demultiplex/barcode{i}/dual_cutadapt/barcode{i}.summary",
+        unknowns = "data/demultiplex/barcode{i}/dual_cutadapt/unknown.fastq.gz"
     input:
         reads = get_reads,
         tags = "tags/barcode{i}.fasta"
     params:
-        outdir = "data/demultiplex/barcode{i}",
+        outdir = "data/demultiplex/barcode{i}/dual_cutadapt/",
         samples = get_demuxes
-    log: "logs/demux_barcode{i}.log"
+    log: "logs/demux_barcode{i}_dual_cutadapt.log"
     threads: maxthreads
     conda: "conda/demultiplex.yaml"
     shell:
@@ -106,15 +106,49 @@ checkpoint demultiplex:
         grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
         """
 
+checkpoint demultiplex_minibar:
+    output:
+        summary = "data/demultiplex/barcode{i}/dual_minibar/barcode{i}.summary"
+    input:
+        reads = get_reads,
+        tags = "tags/barcode{i}.tsv",
+        minibar = "scripts/minibar/minibar.py"
+    params:
+        outdir = "data/demultiplex/dual_minibar/barcode{i}",
+        samples = get_demuxes,
+        temp_fastq = "data/reads/barcode{i}/all.fastq.gz"
+    log: "logs/demux_barcode{i}_dual_minibar.log"
+    threads: maxthreads
+    conda: "conda/minibar.yaml"
+    shell:
+        """
+        mkdir -p {params.outdir}
+        for s in {params.samples}; do
+            echo "" | gzip -c - >"$s"
+        done
+        trap "rm -f {params.temp_fastq}" EXIT
+        cat {input.reads} >{params.temp_fastq} &
+        python {input.minibar}\
+               {input.tags}\
+               {params.temp_fastq}\
+               -e 2\
+               -E 5\
+               -l 120\
+               -F\
+               -P {params.outdir}/\
+               -fh &>{log}
+        cp {log} {output.summary}
+        """
+
 rule demultiplex_single:
     output:
-        summary = "data/demultiplex/barcode{i}/single/barcode{i}.summary"
+        summary = "data/demultiplex/barcode{i}/single_cutadapt/barcode{i}.summary"
     input:
-        reads = "data/demultiplex/barcode{i}/unknown.fastq.gz",
+        reads = "data/demultiplex/barcode{i}/dual_cutadapt/unknown.fastq.gz",
         tags = "tags/barcode{i}_single.fasta"
     params:
-        outdir = "data/demultiplex/barcode{i}/single"
-    log: "logs/demux_single_barcode{i}.log"
+        outdir = "data/demultiplex/barcode{i}/single_cutadapt"
+    log: "logs/demux_barcode{i}_single_cutadapt.log"
     threads: maxthreads
     conda: "conda/demultiplex.yaml"
     shell:
@@ -130,12 +164,12 @@ rule demultiplex_single:
         """
 
 rule rDNA_consensus:
-    output: "data/consensus/barcode{i}/{sample}/final_clusters.tsv"
-    input: "data/demultiplex/barcode{i}/{sample}.fastq.gz"
+    output: "data/consensus/barcode{i}/{demux_algo}/{sample}/final_clusters.tsv"
+    input: "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq.gz"
     params:
-        outdir = "data/consensus/barcode{i}/{sample}",
-        unzipped = "data/demultiplex/barcode{i}/{sample}.fastq"
-    log: "logs/consensus_barcode{i}/{sample}.log"
+        outdir = "data/consensus/barcode{i}/{demux_algo}/{sample}",
+        unzipped = "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq"
+    log: "logs/consensus_barcode{i}_{demux_algo}/{sample}.log"
     conda: "conda/NGSpeciesID.yaml"
     threads: 1
     shell:
