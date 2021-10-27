@@ -132,7 +132,8 @@ if (!is.null(tags_ITS1_fasta)) {
   Biostrings::writeXStringSet(seq_ITS1, tags_ITS1_fasta)
 }
 if (!is.null(tags_ITS1_table)) {
-  write.table(ITS_tags_minibar, tags_ITS1_table, sep = "\t", row.names = FALSE)
+  write.table(ITS_tags_minibar, tags_ITS1_table, sep = "\t", row.names = FALSE,
+              quote = FALSE)
 }
 
 if (!is.null(tags_3NDf_LR5_fasta)) {
@@ -140,7 +141,8 @@ if (!is.null(tags_3NDf_LR5_fasta)) {
 }
 
 if (!is.null(tags_3NDf_LR5_table)) {
-  write.table(rDNA_tags_minibar, tags_3NDf_LR5_table, sep = "\t", row.names = FALSE)
+  write.table(rDNA_tags_minibar, tags_3NDf_LR5_table, sep = "\t", row.names = FALSE,
+              quote = FALSE)
 }
 
 # if we have a plate, then convert tag (pairs) to wells
@@ -201,7 +203,8 @@ if (!is.null(tag_plate)) {
         rev_tag = rev_tag,
         rev_primer = rev_primer
       ) |>
-      write.table(sample_tags_table[i], sep = "\t", row.names = FALSE)
+      write.table(sample_tags_table[i], sep = "\t", row.names = FALSE,
+                  quote = FALSE)
 
     sample_data$sample |>
       purrr::discard(is.na) |>
