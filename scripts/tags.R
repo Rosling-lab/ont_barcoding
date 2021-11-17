@@ -5,29 +5,30 @@ if (exists("snakemake")) {
   # (some may be NULL)
   tags_3NDf <- snakemake@input$tags_3NDf
   tags_ITS1_LR5 <- snakemake@input$tags_ITS1_LR5
-  tag_plate <- snakemake@input$tag_plate
+  # tag_plate <- snakemake@input$tag_plate
   sample_plate <- snakemake@input$sample_plate
 
   # output files
   # (some may be NULL)
-  tags_ITS1_fasta <- snakemake@output$tags_ITS1_fasta
-  tags_ITS1_table <- snakemake@output$tags_ITS1_table
-  tags_3NDf_LR5_fasta <- snakemake@output$tags_3NDf_LR5_fasta
-  tags_3NDf_LR5_table <- snakemake@output$tags_3NDf_LR5_table
+  # tags_ITS1_fasta <- snakemake@output$tags_ITS1_fasta
+  # tags_ITS1_table <- snakemake@output$tags_ITS1_table
+  # tags_3NDf_LR5_fasta <- snakemake@output$tags_3NDf_LR5_fasta
+  # tags_3NDf_LR5_table <- snakemake@output$tags_3NDf_LR5_table
   sample_tags_fasta <- snakemake@output$sample_tags_fasta
   sample_tags_table <- snakemake@output$sample_tags_table
+  sample_tags_single_fasta <- snakemake@output$sample_tags_single_fasta
   sample_names <- snakemake@output$sample_names
+  sample_names_single <- snakemake@output$sample_names_single
 } else {
   # defaults without Snakemake
   tags_3NDf <- "tags/3NDf_barcodes.fasta"
   tags_ITS1_LR5 <- "tags/its1_lr5_barcodes.fasta"
-  tag_plate <- "tags/3NDf-LR5_tagplate.xlsx"
   sample_plate <- list.files("samples", "barcode[0-9]+\\.xlsx", full.names = TRUE)
 
-  tags_ITS1_fasta <- "tags/ITS1_tags.fasta"
-  tags_ITS1_table <- "tags/ITS1_tags.tsv"
-  tags_3NDf_LR5_fasta <- "tags/3NDf_LR5_tags.fasta"
-  tags_3NDf_LR5_table <- "tags/3NDf_LR5_tags.tsv"
+  # tags_ITS1_fasta <- "tags/ITS1_tags.fasta"
+  # tags_ITS1_table <- "tags/ITS1_tags.tsv"
+  # tags_3NDf_LR5_fasta <- "tags/3NDf_LR5_tags.fasta"
+  # tags_3NDf_LR5_table <- "tags/3NDf_LR5_tags.tsv"
   sample_tags_fasta <- file.path(
     "tags",
     sub("xlsx$", "fasta", basename(sample_plate))
@@ -36,9 +37,17 @@ if (exists("snakemake")) {
     "tags",
     sub("xlsx$", "tsv", basename(sample_plate))
   )
+  sample_tags_single_fasta <- file.path(
+    "tags",
+    sub("\\.xlsx$", "_single.fasta", basename(sample_plate))
+  )
   sample_names <- file.path(
     "samples",
     sub("xlsx$", "txt", basename(sample_plate))
+  )
+  sample_names_single <- file.path(
+    "samples",
+    sub("\\.xlsx$", "_single.txt", basename(sample_plate))
   )
 }
 
@@ -96,7 +105,6 @@ mindist(tagset_LR5) # 7
 mindist(tagset_ITS1) # 7
 
 # make a set of tags in cutadapt fasta format for 3NDf--LR5
-
 rDNA_tags_cutadapt <-
   tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) |>
   tidyr::unpack(c("fwd", "rev"), names_sep = "_") |>
@@ -122,36 +130,40 @@ ITS_tags_minibar <-
     name = name,
     fwd_tag = remove_lcsuffix(value),
     fwd_primer = Biobase::lcSuffix(value),
-    rev_tag = "GCATATCAAT",
-    rev_primer = "AAGCGGAGGA"
+    rev_tag = "GCATATCAATAAGCGG",
+    rev_primer = "AGGA"
   )
 
 # write out the tags; in this form they are not designed for a specific plate
 # layout.
 
-if (!is.null(tags_ITS1_fasta)) {
-  Biostrings::writeXStringSet(seq_ITS1, tags_ITS1_fasta)
-}
-if (!is.null(tags_ITS1_table)) {
-  write.table(ITS_tags_minibar, tags_ITS1_table, sep = "\t", row.names = FALSE,
-              quote = FALSE)
-}
-
-if (!is.null(tags_3NDf_LR5_fasta)) {
-  writeLines(rDNA_tags_cutadapt, tags_3NDf_LR5_fasta)
-}
-
-if (!is.null(tags_3NDf_LR5_table)) {
-  write.table(rDNA_tags_minibar, tags_3NDf_LR5_table, sep = "\t", row.names = FALSE,
-              quote = FALSE)
-}
+# if (!is.null(tags_ITS1_fasta)) {
+#   Biostrings::writeXStringSet(seq_ITS1, tags_ITS1_fasta)
+# }
+# if (!is.null(tags_ITS1_table)) {
+#   write.table(ITS_tags_minibar, tags_ITS1_table, sep = "\t", row.names = FALSE,
+#               quote = FALSE)
+# }
+#
+# if (!is.null(tags_3NDf_LR5_fasta)) {
+#   writeLines(rDNA_tags_cutadapt, tags_3NDf_LR5_fasta)
+# }
+#
+# if (!is.null(tags_3NDf_LR5_table)) {
+#   write.table(rDNA_tags_minibar, tags_3NDf_LR5_table, sep = "\t", row.names = FALSE,
+#               quote = FALSE)
+# }
 
 # if we have a plate, then convert tag (pairs) to wells
-if (!is.null(tag_plate)) {
+
+
+
+# convert wells to samples for each plate
+for (i in seq_along(sample_plate)) {
   platekey <- dplyr::left_join(
     readxl::read_xlsx(
-      tag_plate,
-      "3NDf",
+      sample_plate[i],
+      sheet = "3NDf",
       range = "B2:M9",
       col_names = as.character(1:12),
       col_types = "text"
@@ -159,8 +171,8 @@ if (!is.null(tag_plate)) {
       dplyr::mutate(row = LETTERS[1:8]) |>
       tidyr::pivot_longer(cols = 1:12, names_to = "col", values_to = "3NDf"),
     readxl::read_xlsx(
-      tag_plate,
-      "LR5",
+      sample_plate[i],
+      sheet = "LR5",
       range = "B2:M9",
       col_names = as.character(1:12),
       col_types = "text"
@@ -171,44 +183,64 @@ if (!is.null(tag_plate)) {
   ) |>
     dplyr::mutate(tagname = glue::glue("3NDf_bc{`3NDf`}_lr5_{LR5}"))
 
-# convert wells to samples for each plate
-  for (i in seq_along(sample_plate)) {
-    sample_data <- readxl::read_xlsx(
-      sample_plate[i],
-      range = "B2:M9",
-      col_names = as.character(1:12),
-      col_types = "text"
+  sample_data <- readxl::read_xlsx(
+    sample_plate[i],
+    sheet = "Dual",
+    range = "B2:M9",
+    col_names = as.character(1:12),
+    col_types = "text"
+  ) |>
+    dplyr::mutate(row = LETTERS[1:8]) |>
+    tidyr::pivot_longer(
+      cols = 1:12,
+      names_to = "col",
+      values_to = "sample"
     ) |>
-      dplyr::mutate(row = LETTERS[1:8]) |>
-      tidyr::pivot_longer(
-        cols = 1:12,
-        names_to = "col",
-        values_to = "sample"
-      ) |>
-      dplyr::left_join(platekey, by = c("row", "col"))
-    sample_data %$%
-      stringi::stri_replace_all_fixed(
-        rDNA_tags_cutadapt,
-        paste0(">", tagname),
-        paste0(">", dplyr::coalesce(sample, tagname)),
-        vectorize_all = FALSE
-      ) |>
-      writeLines(sample_tags_fasta[i])
+    dplyr::left_join(platekey, by = c("row", "col"))
 
-    sample_data |>
-      dplyr::left_join(rDNA_tags_minibar, by = c("tagname" = "name")) |>
-      dplyr::transmute(
-        name = dplyr::coalesce(sample, tagname),
-        fwd_tag = fwd_tag,
-        fwd_primer = fwd_primer,
-        rev_tag = rev_tag,
-        rev_primer = rev_primer
-      ) |>
-      write.table(sample_tags_table[i], sep = "\t", row.names = FALSE,
-                  quote = FALSE)
+  sample_data %$%
+    stringi::stri_replace_all_fixed(
+      rDNA_tags_cutadapt,
+      paste0(">", tagname),
+      paste0(">", dplyr::coalesce(sample, tagname)),
+      vectorize_all = FALSE
+    ) |>
+    writeLines(sample_tags_fasta[i])
 
-    sample_data$sample |>
-      purrr::discard(is.na) |>
-      writeLines(sample_names[i])
-  }
+  sample_data |>
+    dplyr::left_join(rDNA_tags_minibar, by = c("tagname" = "name")) |>
+    dplyr::transmute(
+      name = dplyr::coalesce(sample, tagname),
+      fwd_tag = fwd_tag,
+      fwd_primer = fwd_primer,
+      rev_tag = rev_tag,
+      rev_primer = rev_primer
+    ) |>
+    write.table(sample_tags_table[i], sep = "\t", row.names = FALSE,
+                quote = FALSE)
+
+  sample_data$sample |>
+    purrr::discard(is.na) |>
+    writeLines(sample_names[i])
+
+  sample_data_single <-
+    readxl::read_xlsx(
+      sample_plate[i],
+      sheet = "Single",
+      col_names = TRUE,
+      col_types = "text"
+    )
+
+  set_names(
+    seq_ITS1,
+    stringi::stri_replace_all_regex(
+      names(seq_ITS1),
+      sprintf("^%s$", sample_data_single$Primer),
+      sample_data_single$Sample,
+      vectorize_all = FALSE
+    )
+  ) |>
+    Biostrings::writeXStringSet(sample_tags_single_fasta[i])
+
+  writeLines(sample_data_single$Sample, sample_names_single[i])
 }
