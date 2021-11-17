@@ -1,4 +1,5 @@
 library(rmelting)
+library(rlang)
 
 max_replace <- function(sequence) {
     chartr("YRSWMKBDHVN", "CGGACGGGCGG", sequence)
