@@ -222,7 +222,7 @@ rule rDNA_consensus:
           --t 1\
           &>{log} || echo "Error in NGSpeciesID" >>{log}
         touch "{output.consensus}"
-        for f in $(find data/consensus/barcode01/dual_cutadapt/{wildcards.sample} -path '*racon_cl_id_*/consensus.fasta') ; do
+        for f in $(find {params.outdir} -path '*racon_cl_id_*/consensus.fasta') ; do
             echo "$f" | sed -r 's|.*/racon_cl_id(_[0-9]+)/consensus.fasta|>{wildcards.sample}\\1|' >>"{output.consensus}"
             tail -n+2 "$f" >>{output.consensus}
         done
