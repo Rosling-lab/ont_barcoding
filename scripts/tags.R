@@ -1,5 +1,4 @@
 library(magrittr)
-
 if (exists("snakemake")) {
   # input files
   # (some may be NULL)
@@ -78,11 +77,11 @@ enframe_tags <- function(tags) {
   revcomp <- as.character(Biostrings::reverseComplement(tags))
   tags <- as.character(tags)
   primer <- Biobase::lcSuffix(tags)
-  tags |>
-    tibble::enframe(value = "seq") |>
+  tags %>%
+    tibble::enframe(value = "seq") %>%
     dplyr::mutate(
-      tag = seq |>
-        remove_lcsuffix() |> #remove the primer
+      tag = seq %>%
+        remove_lcsuffix() %>% #remove the primer
         remove_lcprefix(), #remove the "pad", if any
       primer = primer,
       revcomp = revcomp
@@ -95,8 +94,8 @@ tagset_ITS1 <- enframe_tags(seq_ITS1)
 
 # find the minimum edit distance between tags in a tag set
 mindist <- function(tags) {
-  adist(tags$tag) |>
-  purrr::keep(~.>0) |>
+  adist(tags$tag) %>%
+  purrr::keep(~.>0) %>%
   min()
 }
 
@@ -106,15 +105,15 @@ mindist(tagset_ITS1) # 7
 
 # make a set of tags in cutadapt fasta format for 3NDf--LR5
 rDNA_tags_cutadapt <-
-  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) |>
-  tidyr::unpack(c("fwd", "rev"), names_sep = "_") |>
+  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) %>%
+  tidyr::unpack(c("fwd", "rev"), names_sep = "_") %>%
   glue::glue_data(">{fwd_name}_{rev_name}\n{fwd_seq}...{rev_revcomp}")
 
 # make a set of tags in minibar table format for 3NDf--LR5
 rDNA_tags_minibar <-
-  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) |>
-  tidyr::unpack(c("fwd", "rev"), names_sep = "_") |>
-  dplyr::select(fwd_name, rev_name, fwd_tag, fwd_primer, rev_tag, rev_primer) |>
+  tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) %>%
+  tidyr::unpack(c("fwd", "rev"), names_sep = "_") %>%
+  dplyr::select(fwd_name, rev_name, fwd_tag, fwd_primer, rev_tag, rev_primer) %>%
   tidyr::unite("name", c(fwd_name, rev_name))
 
 # ITS(1) is already in a fine format for cutadapt,
@@ -125,7 +124,7 @@ rDNA_tags_minibar <-
 # and half is the primer
 
 ITS_tags_minibar <-
-  tibble::enframe(as.character(seq_ITS1)) |>
+  tibble::enframe(as.character(seq_ITS1)) %>%
   dplyr::transmute(
     name = name,
     fwd_tag = remove_lcsuffix(value),
@@ -167,8 +166,8 @@ for (i in seq_along(sample_plate)) {
       range = "B2:M9",
       col_names = as.character(1:12),
       col_types = "text"
-    ) |>
-      dplyr::mutate(row = LETTERS[1:8]) |>
+    ) %>%
+      dplyr::mutate(row = LETTERS[1:8]) %>%
       tidyr::pivot_longer(cols = 1:12, names_to = "col", values_to = "3NDf"),
     readxl::read_xlsx(
       sample_plate[i],
@@ -176,11 +175,11 @@ for (i in seq_along(sample_plate)) {
       range = "B2:M9",
       col_names = as.character(1:12),
       col_types = "text"
-    ) |>
-      dplyr::mutate(row = LETTERS[1:8]) |>
+    ) %>%
+      dplyr::mutate(row = LETTERS[1:8]) %>%
       tidyr::pivot_longer(cols = 1:12, names_to = "col", values_to = "LR5"),
     c("row", "col")
-  ) |>
+  ) %>%
     dplyr::mutate(tagname = glue::glue("3NDf_bc{`3NDf`}_lr5_{LR5}"))
 
   sample_data <- readxl::read_xlsx(
@@ -189,13 +188,13 @@ for (i in seq_along(sample_plate)) {
     range = "B2:M9",
     col_names = as.character(1:12),
     col_types = "text"
-  ) |>
-    dplyr::mutate(row = LETTERS[1:8]) |>
+  ) %>%
+    dplyr::mutate(row = LETTERS[1:8]) %>%
     tidyr::pivot_longer(
       cols = 1:12,
       names_to = "col",
       values_to = "sample"
-    ) |>
+    ) %>%
     dplyr::left_join(platekey, by = c("row", "col"))
 
   sample_data %$%
@@ -204,23 +203,23 @@ for (i in seq_along(sample_plate)) {
       paste0(">", tagname),
       paste0(">", dplyr::coalesce(sample, tagname)),
       vectorize_all = FALSE
-    ) |>
+    ) %>%
     writeLines(sample_tags_fasta[i])
 
-  sample_data |>
-    dplyr::left_join(rDNA_tags_minibar, by = c("tagname" = "name")) |>
+  sample_data %>%
+    dplyr::left_join(rDNA_tags_minibar, by = c("tagname" = "name")) %>%
     dplyr::transmute(
       name = dplyr::coalesce(sample, tagname),
       fwd_tag = fwd_tag,
       fwd_primer = fwd_primer,
       rev_tag = rev_tag,
       rev_primer = rev_primer
-    ) |>
+    ) %>%
     write.table(sample_tags_table[i], sep = "\t", row.names = FALSE,
                 quote = FALSE)
 
-  sample_data$sample |>
-    purrr::discard(is.na) |>
+  sample_data$sample %>%
+    purrr::discard(is.na) %>%
     writeLines(sample_names[i])
 
   sample_data_single <-
@@ -239,7 +238,7 @@ for (i in seq_along(sample_plate)) {
       sample_data_single$Sample,
       vectorize_all = FALSE
     )
-  ) |>
+  ) %>%
     Biostrings::writeXStringSet(sample_tags_single_fasta[i])
 
   writeLines(sample_data_single$Sample, sample_names_single[i])
