@@ -18,41 +18,47 @@ def get_reads(wildcards):
     return glob(f"data/reads/barcode{wildcards.i}/*.fastq.gz")
 
 def get_samples(wildcards):
+    print('Getting samples for ' + wildcards.demux_algo + ".")
     if wildcards.demux_algo == "single_cutadapt":
         with open(checkpoints.sample_tags.get(i = wildcards.i).output.sample_names_single) as f:
-            return([s.rstrip('\n') for s in f.readlines()])
+            return [s.rstrip('\n') for s in f.readlines()]
     else:
         with open(checkpoints.sample_tags.get(i = wildcards.i).output.sample_names) as f:
-            return([s.rstrip('\n') for s in f.readlines()])
+            return [s.rstrip('\n') for s in f.readlines()]
 
-def get_demuxes(wildcards):
-    return(expand("data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq.gz",
-        i = wildcards.i,
-        demux_algo = wildcards.demux_algo,
-        sample = get_samples(wildcards)
-    ))
+# def get_demuxes(wildcards):
+#     return expand("data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq.gz",
+#         i = wildcards.i,
+#         demux_algo = wildcards.demux_algo,
+#         sample = get_samples(wildcards)
+#     )
 
 def get_consensus(wildcards):
-    if wildcards.demux_algo == "dual_minibar":
-        print('Running get_consensus for dual_minibar.')
-        my_checkpoint = checkpoints.demultiplex_minibar
-    elif wildcards.demux_algo == "dual_cutadapt":
-        print('Running get_consensus for dual_cutadapt.')
-        my_checkpoint = checkpoints.demultiplex_cutadapt
-    elif wildcards.demux_algo == "single_cutadapt":
-        print('Running get_consensus for single_cutadapt.')
-        my_checkpoint = checkpoints.demultiplex_single
-    else:
-        raise ValueError('unknown demux_algo:' + wildcards.demux_algo)
-    my_checkpoint.get(i = wildcards.i, demux_algo = wildcards.demux_algo)
+    # if wildcards.demux_algo == "dual_minibar":
+    #     print('Running get_consensus for dual_minibar.')
+    #     my_checkpoint = checkpoints.demultiplex_minibar
+    # elif wildcards.demux_algo == "dual_cutadapt":
+    #     print('Running get_consensus for dual_cutadapt.')
+    #     my_checkpoint = checkpoints.demultiplex_cutadapt
+    # elif wildcards.demux_algo == "single_cutadapt":
+    #     print('Running get_consensus for single_cutadapt.')
+    #     my_checkpoint = checkpoints.demultiplex_single
+    # else:
+    #     raise ValueError('unknown demux_algo:' + wildcards.demux_algo)
+    # my_checkpoint.get(i = wildcards.i, demux_algo = wildcards.demux_algo)
     samples = get_samples(wildcards)
+    print("Samples:")
     for s in samples:
         print(s)
-    return(expand("data/consensus/barcode{i}/{demux_algo}/{sample}/consensus.fasta",
+    consensus_files = expand("data/consensus/barcode{i}/{demux_algo}/{sample}/consensus.fasta",
         i = wildcards.i,
         demux_algo = wildcards.demux_algo,
-        sample = get_samples(wildcards)
-    ))
+        sample = samples
+    )
+    print("Consensus files:")
+    for f in consensus_files:
+        print(f)
+    return(consensus_files)
 
 rule all:
     input:
@@ -96,16 +102,16 @@ checkpoint sample_tags:
     threads: 1
     script: "scripts/tags.R"
 
-checkpoint demultiplex_cutadapt:
+rule demultiplex_cutadapt:
     output:
         summary = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.summary",
+        demux = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.fastq.gz",
         unknowns = "data/demultiplex/barcode{i}/{demux_algo}/unknown.fastq.gz"
     input:
         reads = get_reads,
         tags = "tags/barcode{i}.fasta"
     params:
-        outdir = "data/demultiplex/barcode{i}/{demux_algo}/",
-        samples = get_demuxes
+        outdir = "data/demultiplex/barcode{i}/{demux_algo}/"
     wildcard_constraints:
         demux_algo = "dual_cutadapt"
     log: "logs/demux_barcode{i}_{demux_algo}.log"
@@ -114,62 +120,59 @@ checkpoint demultiplex_cutadapt:
     shell:
         """
         mkdir -p {params.outdir}
-        for s in {params.samples}; do
-            echo "" | gzip -c - >"$s"
-        done
         zcat {input.reads} |
-        cutadapt -m 400\
+        cutadapt -m 400\\
                  -o - - |
-        cutadapt -g file:{input.tags}\
-                 --revcomp\
-                 -o {params.outdir}/{{name}}.fastq.gz\
-                 -j {threads}\
-                 -\
-                 >{log}
-        grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
+        cutadapt -g file:{input.tags}\\
+                 --revcomp\\
+                 -o {output.demux}\\
+                 --untrimmed-output {output.unknowns}\\
+                 --rename='{{header}} sample:{{adapter_name}};'\\
+                 -j {threads}\\
+                 - |
+                 tee {log}
+        grep -B2 "[Tt]rimmed: [^0]" >{output.summary}
         """
 
-checkpoint demultiplex_minibar:
+rule demultiplex_minibar:
     output:
-        summary = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.summary"
+        summary = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.summary",
+        demux = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.fastq.gz"
     input:
         reads = get_reads,
         tags = "tags/barcode{i}.tsv",
         minibar = "scripts/minibar/minibar.py"
     params:
         outdir = "data/demultiplex/barcode{i}/{demux_algo}",
-        samples = get_demuxes,
         temp_fastq = "data/reads/barcode{i}/all.fastq.gz"
     wildcard_constraints:
         demux_algo = "dual_minibar"
     log: "logs/demux_barcode{i}_{demux_algo}.log"
-    threads: maxthreads
+    threads: 1
     conda: "conda/minibar.yaml"
     shell:
         """
         mkdir -p {params.outdir}
-        for s in {params.samples}; do
-            echo "" | gzip -c - >"$s"
-        done
-        cat {input.reads} >{params.temp_fastq} &
-        python {input.minibar}\
-               {input.tags}\
-               {params.temp_fastq}\
-               -e 2\
-               -E 5\
-               -l 120\
-               -F\
-               -P {params.outdir}/\
-               -fh\
-               &>{log}
-        gzip -f {params.outdir}/*.fastq
+        cat {input.reads} >{params.temp_fastq}
+        python {input.minibar}\\
+               {input.tags}\\
+               {params.temp_fastq}\\
+               -e 2\\
+               -E 5\\
+               -l 120\\
+               -S\\
+               -fh\\
+               2>{log} |
+        sed -r 's/^(@.+) [Hhx][+-]?\\([-, 0-9]+\\), ?[Hhx][+-]?\\([-, 0-9]+\\) (.+)$/\\1 sample:\\2;/' |
+        gzip -c - >{output.demux}
         cp {log} {output.summary}
         rm -f {params.temp_fastq}
         """
 
-checkpoint demultiplex_single:
+rule demultiplex_single:
     output:
-        summary = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.summary"
+        summary = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.summary",
+        demux = "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.fastq.gz"
     input:
         reads = "data/demultiplex/barcode{i}/dual_cutadapt/unknown.fastq.gz",
         tags = "tags/barcode{i}_single.fasta"
@@ -183,23 +186,26 @@ checkpoint demultiplex_single:
     shell:
         """
         mkdir -p {params.outdir}
-        cutadapt -g file:{input.tags}\
-                 --revcomp\
-                 -o {params.outdir}/{{name}}.fastq.gz\
-                 -j {threads}\
-                 {input.reads}\
-                 >{log}
-        grep -B2 "[Tt]rimmed: [^0]" {log} >{output.summary}
+        cutadapt -g file:{input.tags}\\
+                 --revcomp\\
+                 -o {output.demux}\\
+                 --untrimmed-output /dev/null \\
+                 --rename='{{header}} sample:{{adapter_name}};'\\
+                 -j {threads}\\
+                 {input.reads} |
+                 tee {log} |
+        grep -B2 "[Tt]rimmed: [^0]" >{output.summary}
         """
 
 rule rDNA_consensus:
     output:
         cluster_map = "data/consensus/barcode{i}/{demux_algo}/{sample}/final_clusters.tsv",
         consensus = "data/consensus/barcode{i}/{demux_algo}/{sample}/consensus.fasta"
-    input: "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq.gz"
+    input: "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.fastq.gz"
     params:
         outdir = "data/consensus/barcode{i}/{demux_algo}/{sample}",
-        unzipped = "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq"
+        filtered = "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq",
+        sample_label = "sample:{sample};"
     wildcard_constraints:
         demux_algo = "dual_(cutadapt|minibar)"
     log: "logs/consensus_barcode{i}_{demux_algo}/{sample}.log"
@@ -208,35 +214,41 @@ rule rDNA_consensus:
     shell:
         """
         mkdir -p {params.outdir}
-        gunzip -fk {input}
-        NGSpeciesID\
-          --ont\
-          --consensus\
-          --racon\
-          --racon_iter 3\
-          --fastq {params.unzipped}\
-          --outfolder {params.outdir}\
-          --m 2800\
-          --s 500\
-          --sample_size 300\
-          --t 1\
+        vsearch --fastx_getseqs {input}\\
+                --fastqout {params.filtered}\\
+                --label '{params.sample_label}'\\
+                --label_substr_match\\
+                --notrunclabels
+        NGSpeciesID\\
+          --ont\\
+          --consensus\\
+          --racon\\
+          --racon_iter 3\\
+          --fastq {params.filtered}\\
+          --outfolder {params.outdir}\\
+          --m 2800\\
+          --s 500\\
+          --sample_size 1000\\
+          --t 1\\
           &>{log} || echo "Error in NGSpeciesID" >>{log}
         touch "{output.consensus}"
+        touch "{output.cluster_map}"
         for f in $(find {params.outdir} -path '*racon_cl_id_*/consensus.fasta') ; do
             echo "$f" | sed -r 's|.*/racon_cl_id(_[0-9]+)/consensus.fasta|>{wildcards.sample}\\1|' >>"{output.consensus}"
             tail -n+2 "$f" >>{output.consensus}
         done
-        rm {params.unzipped}
+        rm {params.filtered}
         """
 
 rule ITS_consensus:
     output:
         cluster_map = "data/consensus/barcode{i}/{demux_algo}/{sample}/final_clusters.tsv",
         consensus = "data/consensus/barcode{i}/{demux_algo}/{sample}/consensus.fasta"
-    input: "data/demultiplex/barcode{i}/single_cutadapt/{sample}.fastq.gz"
+    input: "data/demultiplex/barcode{i}/{demux_algo}/barcode{i}.fastq.gz"
     params:
-        outdir = "data/consensus/barcode{i}/single_cutadapt/{sample}",
-        unzipped = "data/demultiplex/barcode{i}/single_cutadapt/{sample}.fastq"
+        outdir = "data/consensus/barcode{i}/{demux_algo}/{sample}",
+        filtered = "data/demultiplex/barcode{i}/{demux_algo}/{sample}.fastq",
+        sample_label = "sample:{sample};"
     wildcard_constraints:
         demux_algo = "single_(cutadapt|minibar)"
     log: "logs/consensus_barcode{i}_{demux_algo}/{sample}.log"
@@ -245,24 +257,29 @@ rule ITS_consensus:
     shell:
         """
         mkdir -p {params.outdir}
-        gunzip -fk {input}
-        NGSpeciesID\
-          --ont\
-          --consensus\
-          --racon\
-          --racon_iter 3\
-          --fastq {params.unzipped}\
-          --m 800\
-          --s 200\
-          --sample_size 300\
+        vsearch --fastx_getseq {input}\\
+                --fastqout {params.filtered}\\
+                --label '{params.sample_label}'\\
+                --label_substr_match\\
+                --notrunclabels
+        NGSpeciesID\\
+          --ont\\
+          --consensus\\
+          --racon\\
+          --racon_iter 3\\
+          --fastq {params.filtered}\\
+          --outfolder {params.outdir}\\
+          --m 800\\
+          --s 200\\
+          --sample_size 1000\\
           --t 1
           &>{log} || echo "Error in NGSpeciesID" >>{log}
         touch "{output.consensus}"
-        for f in $(find data/consensus/barcode01/dual_cutadapt/{wildcards.sample} -path '*racon_cl_id_*/consensus.fasta') ; do
+        for f in $(find data/consensus/barcode01/{wildcards.demux_algo}/{wildcards.sample} -path '*racon_cl_id_*/consensus.fasta') ; do
             echo "$f" | sed -r 's|.*/racon_cl_id(_[0-9]+)/consensus.fasta|>{wildcards.sample}\\1|' >>"{output.consensus}"
             tail -n+2 "$f" >>{output.consensus}
         done
-        rm {params.unzipped}
+        rm {params.filtered}
         """
 
 rule all_consensus:
