@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+#SBATCH -A snic2021-5-44
+#SBATCH -p node
+#SBATCH -N 1
+#SBATCH -t 4:00:00
+#SBATCH -J ont_barcoding
+#SBATCH -C usage_mail
+#SBATCH -M rackham
+#SBATCH --mail-type=ALL
+#SBATCH --output="logs/snakemake-%j.log"
+#SBATCH --error="logs/snakemake-%j.log"
+
+module load bioinfo-tools &&
+  module load snakemake &&
+
+  snakemake -pr --jobs $SLURM_JOB_CPUS_PER_NODE\
+#--use-envmodules\
+--use-conda\
+--shadow-prefix /scratch
