@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash -l
 
 #SBATCH -A snic2021-5-44
 #SBATCH -p node
@@ -11,10 +11,10 @@
 #SBATCH --output="logs/snakemake-%j.log"
 #SBATCH --error="logs/snakemake-%j.log"
 
-module load bioinfo-tools &&
-  module load snakemake &&
+module load conda bioinfo-tools snakemake &&
 
-  snakemake -pr --jobs $SLURM_JOB_CPUS_PER_NODE\
-#--use-envmodules\
---use-conda\
---shadow-prefix /scratch
+
+snakemake -pr --jobs $SLURM_JOB_CPUS_PER_NODE\
+    --use-conda\
+    --conda-frontend conda\
+    --shadow-prefix /scratch
