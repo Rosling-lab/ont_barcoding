@@ -90,6 +90,7 @@ checkpoint loci_and_primers:
         primers = "tags/primers.fasta",
         config = "samples/barcode{i}.xlsx",
         script = "scripts/loci_and_primers.R"
+    envmodules: "R_packages/4.1.1"
     conda: "conda/tags.yaml"
     threads: 1
     script: "scripts/loci_and_primers.R"
@@ -106,6 +107,7 @@ rule tags:
         primers = "tags/primers.fasta",
         config = "samples/barcode{i}.xlsx",
         script = "scripts/tags.R"
+    envmodules: "R_packages/4.1.1"
     conda: "conda/tags.yaml"
     threads: 1
     script: "scripts/tags.R"
