@@ -11,7 +11,8 @@ if (exists("snakemake")) {
 } else {
   configfile <- "samples/barcode01.xlsx"
   primerfile <- "tags/primers.fasta"
-  locuslist <- sub("xlsx$", "locuslist", configfile)
+  basename <- sub("\\.xlsx$", "", basename(configfile))
+  locuslist <- file.path("data", "samples", basename, "locuslist")
 }
 
 primers <- Biostrings::readDNAStringSet(primerfile)

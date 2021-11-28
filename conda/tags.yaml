@@ -9,8 +9,7 @@ dependencies:
   - r-tibble
   - r-dplyr
   - r-tidyr
-  - r-glue
   - r-readxl
-  - r-stringi
+  - r-purrr
   - bioconductor-biostrings
   - bioconductor-biobase

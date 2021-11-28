@@ -13,9 +13,12 @@ if (exists("snakemake")) {
 
   # output files
   # (some may be NULL)
+  samples_file <- snakemake@output$samples
   primers_fasta <- snakemake@output$primers_fasta
+  trim_fasta <- snakemake@output$trim_fasta
   tags_fasta <- snakemake@output$tags_fasta
   tags_table <- snakemake@output$table
+  length_file <- snakemake@output$lengths
 } else {
   # defaults without Snakemake
   # input files
@@ -28,10 +31,20 @@ if (exists("snakemake")) {
   locus <- "rDNA"
 
   # output files
+  samples_file <- file.path(
+    "tags",
+    basename,
+    paste0(locus, ".samples")
+  )
   primers_fasta <- file.path(
     "tags",
     basename,
     paste0(locus, "_primers.fasta")
+  )
+  trim_fasta <- file.path(
+    "tags",
+    basename,
+    paste0(locus, "_trim.fasta")
   )
   tags_fasta <- file.path(
     "tags",
@@ -42,6 +55,11 @@ if (exists("snakemake")) {
     "tags",
     basename,
     paste0(locus, ".minibar")
+  )
+  length_file <- file.path(
+    "tags",
+    basename,
+    paste0(locus, ".lengths")
   )
 }
 
@@ -127,6 +145,7 @@ if (fwd_is_tagged) {
   fwd_tags <- as.character(tags[[locus$`Forward primer`]])
   stopifnot(all(startsWith(names(fwd_tags), fwd_primer_name)))
   stopifnot(all(endsWith(fwd_tags, fwd_primer_seq)))
+  fwd_length <- max(nchar(fwd_tags))
   fwd_primer <- Biobase::lcSuffix(fwd_tags)
   fwd_pad <- Biobase::lcPrefix(fwd_tags)
   fwd_tags <- fwd_tags %>%
@@ -161,6 +180,7 @@ if (fwd_is_tagged) {
   stopifnot(locus$`Forward primer` %in% names(primers))
   fwd_primer_name <- locus$`Forward primer`
   fwd_primer <- as.character(primers[fwd_primer_name])
+  fwd_length <- nchar(fwd_primer)
   fwd_template <- sprintf("%s;o=%d;e=0.15", fwd_primer, nchar(fwd_primer))
   fwd_tags <- tibble::tibble(
     fwd_tagline = fwd_template,
@@ -181,6 +201,7 @@ if (rev_is_tagged) {
   rev_primer_seq <- as.character(primers[rev_primer_name])
   rev_primer_rc <- as.character(Biostrings::reverseComplement(primers[rev_primer_name]))
   rev_tags <- as.character(tags[[locus$`Reverse primer`]])
+  rev_length <- max(nchar(rev_tags))
   rev_tags_rc <- as.character(Biostrings::reverseComplement(tags[[locus$`Reverse primer`]]))
   stopifnot(all(startsWith(names(rev_tags), rev_primer_name)))
   rev_id <- sub(sprintf("^%s_", rev_primer_name), "", names(rev_tags))
@@ -188,7 +209,7 @@ if (rev_is_tagged) {
   rev_primer_rc <- Biobase::lcPrefix(rev_tags_rc)
   rev_pad_rc <- Biobase::lcSuffix(rev_tags_rc)
   rev_primer <- Biobase::lcSuffix(rev_tags)
-  rev_pad_spacer <- if (rev_pad == "") "" else sprintf("N{%d}", nchar(rev_pad))
+  rev_pad_spacer <- if (rev_pad_rc == "") "" else sprintf("N{%d}", nchar(rev_pad_rc))
   rev_tags <- rev_tags %>%
     remove_lcprefix() %>%
     remove_lcsuffix()
@@ -225,6 +246,7 @@ if (rev_is_tagged) {
   stopifnot(locus$`Reverse primer` %in% names(primers))
   rev_primer_name <- locus$`Reverse primer`
   rev_primer <- as.character(primers[rev_primer_name])
+  rev_length <- nchar(rev_primer)
   rev_primer_rc <- as.character(Biostrings::reverseComplement(primers[rev_primer_name]))
   rev_template <- sprintf("%s;o=%d;e=0.15", rev_primer_rc, nchar(rev_primer_rc))
   rev_tags <- tibble::tibble(
@@ -251,6 +273,12 @@ tidyr::crossing(fwd_template, rev_template) %$%
   sprintf(">%s_%s\n%s...%s", fwd_primer_name, rev_primer_name, fwd_template, rev_template) %>%
   writeLines(primers_fasta)
 
+# write the trimming file
+# this is for trimming the final barcode sequences
+sprintf(">%s_%s\n%s...%s", fwd_primer_name, rev_primer_name, fwd_primer, rev_primer_rc) %>%
+  writeLines(trim_fasta)
+
+# sample-specific stuff
 platekey <-
   dplyr::inner_join(fwd_platekey, rev_platekey, by = c("row", "col")) %>%
   dplyr::left_join(fwd_tags, by = "fwd_id") %>%
@@ -295,7 +323,7 @@ sample_data %$%
 if (!dir.exists(dirname(tags_table))) dir.create(dirname(tags_table), recursive = TRUE)
 sample_data %>%
   dplyr::transmute(
-    name = paste(fwd_primer_name, rev_primer_name, sep = "_"),
+    name = sample,
     fwd_tag = fwd_tag,
     fwd_primer = fwd_primer,
     rev_tag = rev_tag,
@@ -303,6 +331,16 @@ sample_data %>%
   ) %>%
   write.table(tags_table, sep = "\t", row.names = FALSE, quote = FALSE)
 
+writeLines(
+  c(
+    locus$`Min length` + fwd_length + rev_length, # min length with primers
+    locus$`Max length` + fwd_length + rev_length + 200, # max length with primers
+    (locus$`Min length` + locus$`Max length`) %/% 2L, # central length without primers
+    (locus$`Max length` - locus$`Min length`) %/% 2L # deviation of length without primers
+  ) %>%
+    as.character(),
+  length_file
+)
 # # make a set of tags in cutadapt fasta format for 3NDf--LR5
 # rDNA_tags_cutadapt <-
 #   tidyr::expand_grid(fwd = tagset_3NDf, rev = tagset_LR5) %>%
