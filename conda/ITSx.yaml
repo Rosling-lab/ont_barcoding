@@ -1,0 +1,6 @@
+name: ITSx
+channels:
+ - bioconda
+ - conda-forge
+dependencies:
+  - itsx

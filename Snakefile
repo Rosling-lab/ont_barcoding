@@ -278,3 +278,43 @@ rule all_consensus:
                  - 2>{log} |
         sed 's/ rc$//' >{output}
         """
+
+rule itsx:
+    input: "output/barcode{i}_rDNA_{demux_algo}.fasta"
+    wildcard_constraints:
+        demux_algo = "(cutadapt|minibar)"
+    output:
+        ITS = "output/barcode{i}_rDNA_{demux_algo}.ITS.fasta",
+        LSU = "output/barcode{i}_rDNA_{demux_algo}.LSU.fasta",
+        SSU = "output/barcode{i}_rDNA_{demux_algo}.SSU.fasta"
+    params:
+        prefix = "output/barcode{i}_rDNA_{demux_algo}"
+    log: "logs/itsx{i}_{demux_algo}.log"
+    conda: "conda/ITSx.yaml"
+    threads: 4
+    shell: """
+    ITSx\\
+        -i {input}\\
+        -o {params.prefix}\\
+        -t "."\\
+        --cpu {threads}\\
+        --complement F\\
+        --save_regions LSU,SSU\\
+        --graphical F\\
+        --preserve T\\
+        --positions F\\
+        --summary F\\
+        --not_found F\\
+        >{log}
+    """
+
+def get_reference(wildcards):
+    return []
+
+rule sintax:
+    output: touch("output/barcode{i}_{locus}_{demux_algo}_sintax.tsv")
+    wildcard_constraints:
+        demux_algo = "(cutadapt|minibar)"
+    input:
+        consensus = "output/barcode{i}_{locus}_{demux_algo}.fasta",
+        reference = get_reference
