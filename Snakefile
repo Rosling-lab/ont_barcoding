@@ -336,7 +336,7 @@ rule sintax:
     wildcard_constraints:
         demux_algo = "(cutadapt|minibar)"
     input:
-        consensus = "output/barcode{i}_{locus}_{demux_algo}.fasta",
+        consensus = "output/barcode{i}_{locus}_{demux_algo}.{sublocus}.fasta",
         reference = get_reference
     threads: maxthreads
     conda: "conda/vsearch.yaml"
