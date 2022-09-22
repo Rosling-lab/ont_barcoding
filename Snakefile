@@ -310,13 +310,44 @@ rule itsx:
     mv {params.fullfile} {output.ITS}
     """
 
+rule download_reunite_rdp_lsu:
+    output: "references/rdp_train.LSU.sintax.fasta.gz"
+    shell: """
+    mkdir -p references
+    wget https://github.com/brendanf/reUnite/releases/download/v0.1/rdp_train.LSU.sintax.fasta.gz -o {output}
+    """
+
+rule download_reunite_unite_its:
+    output: "references/unite.ITS.sintax.fasta.gz"
+    shell: """
+    mkdir -p references
+    wget https://github.com/brendanf/reUnite/releases/download/v0.1/unite.ITS.sintax.fasta.gz -o {output}
+    """
+
 def get_reference(wildcards):
-    return []
+    if wildcards.sublocus == "ITS":
+        return "references/unite.ITS.sintax.fasta.gz"
+    elif wildcards.sublocus == "LSU":
+        return "references/rdp_train.LSU.sintax.fasta.gz"
+
 
 rule sintax:
-    output: touch("output/barcode{i}_{locus}_{demux_algo}_sintax.tsv")
+    output: touch("output/barcode{i}_{locus}_{demux_algo}_{sublocus}_sintax.tsv")
     wildcard_constraints:
         demux_algo = "(cutadapt|minibar)"
     input:
         consensus = "output/barcode{i}_{locus}_{demux_algo}.fasta",
         reference = get_reference
+    threads: maxthreads
+    conda: "conda/vsearch.yaml"
+    log: "logs/sintax_barcode{i}_{locus}_{demux_algo}_{sublocus}.log"
+    shell: """
+    vsearch\\
+      --sintax {input.consensus}\\
+      --db {input.reference}\\
+      --sintax_cutoff 0.9\\
+      --tabbedout {output}\\
+      --threads {threads}\\
+      &>{log}
+    """
+
