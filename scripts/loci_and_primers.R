@@ -84,7 +84,7 @@ for (i in seq_len(nrow(loci))) {
     mytags,
     file.path(outdir, sprintf("%s.primerlist", loci$`Locus name`[i]))
   )
-  readxl::read_xlsx(configfile, loci$`Locus name`[i]) %>%
+  readxl::read_xlsx(configfile, loci$`Locus name`[i], col_types = "text") %>%
     tibble::column_to_rownames(1) %>%
     unlist() %>%
     na.omit() %>%
