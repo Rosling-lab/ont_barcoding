@@ -288,7 +288,8 @@ rule itsx:
         LSU = "output/barcode{i}_rDNA_{demux_algo}.LSU.fasta",
         SSU = "output/barcode{i}_rDNA_{demux_algo}.SSU.fasta"
     params:
-        prefix = "output/barcode{i}_rDNA_{demux_algo}"
+        prefix = "output/barcode{i}_rDNA_{demux_algo}",
+        fullfile = "output/barcode{i}_rDNA_{demux_algo}.full.fasta"
     log: "logs/itsx{i}_{demux_algo}.log"
     conda: "conda/ITSx.yaml"
     threads: 4
@@ -306,6 +307,7 @@ rule itsx:
         --summary F\\
         --not_found F\\
         >{log}
+    mv {params.fullfile} {output.ITS}
     """
 
 def get_reference(wildcards):
