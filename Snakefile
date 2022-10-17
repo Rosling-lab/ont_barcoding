@@ -280,17 +280,17 @@ rule all_consensus:
         """
 
 rule itsx:
-    input: "output/barcode{i}_rDNA_{demux_algo}.fasta"
+    input: "output/barcode{i}_{locus}_{demux_algo}.fasta"
     wildcard_constraints:
         demux_algo = "(cutadapt|minibar)"
     output:
-        ITS = "output/barcode{i}_rDNA_{demux_algo}.ITS.fasta",
-        LSU = "output/barcode{i}_rDNA_{demux_algo}.LSU.fasta",
-        SSU = "output/barcode{i}_rDNA_{demux_algo}.SSU.fasta"
+        ITS = "output/barcode{i}_{locus}_{demux_algo}.ITS.fasta",
+        LSU = "output/barcode{i}_{locus}_{demux_algo}.LSU.fasta",
+        SSU = "output/barcode{i}_{locus}_{demux_algo}.SSU.fasta"
     params:
-        prefix = "output/barcode{i}_rDNA_{demux_algo}",
-        fullfile = "output/barcode{i}_rDNA_{demux_algo}.full.fasta"
-    log: "logs/itsx{i}_{demux_algo}.log"
+        prefix = "output/barcode{i}_{locus}_{demux_algo}",
+        fullfile = "output/barcode{i}_{locus}_{demux_algo}.full.fasta"
+    log: "logs/itsx{i}_{locus}_{demux_algo}.log"
     conda: "conda/ITSx.yaml"
     threads: 4
     shell: """
