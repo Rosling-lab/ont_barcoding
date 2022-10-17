@@ -4,13 +4,10 @@ channels:
  - conda-forge
 dependencies:
  - python=3.6
- - vsearch
  - medaka=0.11.5
- - openblas
  - openblas=0.3.3
  - spoa
  - racon
  - minimap2
- - pip
  - pip:
    - NGSpeciesID

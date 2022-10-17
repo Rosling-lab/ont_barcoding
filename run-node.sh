@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
-#SBATCH -A snic2021-5-44
+#SBATCH -A snic2022-5-42
 #SBATCH -p node
 #SBATCH -N 1
-#SBATCH -t 4:00:00
+#SBATCH -t 0:20:00
 #SBATCH -J ont_barcoding
 #SBATCH -C usage_mail
 #SBATCH -M rackham
