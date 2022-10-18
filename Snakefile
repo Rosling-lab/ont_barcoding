@@ -18,6 +18,11 @@ except FileNotFoundError:
 def get_reads(wildcards):
     return glob(f"data/reads/**/barcode{wildcards.i}/*_pass_barcode{wildcards.i}*.fastq.gz", recursive = True)
 
+def get_fast5(wildcards):
+    return glob(f"data/reads/**/barcode{wildcards.i}/*_pass_barcode{wildcards.i}*.fast5")
+
+#./guppy_basecaller -i ../../../data/reads/fast5_pass -q 0 --barcode_nested_output_folder -r -s ../../../data/sup_reads -c $(pwd)/../data/dna_r9.4.1_e8.1_hac.cfg --device auto
+
 # get the tag files associated with a native barcode and locus (direct call)
 def get_tags_(i, locus):
     checkpoints.loci_and_primers.get(i = i)
@@ -79,6 +84,17 @@ def everything(wildcards):
 rule all:
     input: everything
 
+def demux_counts(wildcards):
+    out = []
+    for i in [x[1][0] for x in snakemake.utils.listfiles("samples/barcode{i}.xlsx")]:
+        for locus in get_loci_(i):
+            for x in expand("output/barcode{i}_{locus}_cutadapt_counts.csv", i = i, locus = locus):
+                out.append(x)
+    return out
+
+rule counts:
+    input: demux_counts
+
 wildcard_constraints:
     i = "\d+"
 
@@ -132,7 +148,8 @@ rule demultiplex_cutadapt:
     output:
         summary = "data/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.summary",
         demux = "data/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz",
-        unknowns = "data/demultiplex/barcode{i}/{locus}/{demux_algo}/unknown.fastq.gz"
+        unknowns = "data/demultiplex/barcode{i}/{locus}/{demux_algo}/unknown.fastq.gz",
+        counts = "output/barcode{i}_{locus}_{demux_algo}_counts.csv"
     input:
         reads = get_reads,
         primers = rules.tags.output.primers_fasta,
@@ -175,7 +192,10 @@ rule demultiplex_cutadapt:
                  --rename='{{header}} sample:{{adapter_name}};'\\
                  - |
                  tee {log.demux} |
-        grep -B2 "[Tt]rimmed: [^0]" >{output.summary}
+        grep -B2 "[Tt]rimmed: [^0]" |
+         tee {output.summary} |
+         paste - - - - |
+         awk 'BEGIN{{OFS=","; print "sample","reads"}}; {{print $3,$13}}' >{output.counts}
         rm -f {params.temp2}
         """
 
