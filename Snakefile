@@ -98,8 +98,7 @@ def demux_counts(wildcards):
     for exp in get_exps([]):
         for i in [x[1][0] for x in snakemake.utils.listfiles(f"samples/{exp}/barcode{{i}}.xlsx")]:
             for locus in get_loci_(exp, i):
-                for x in expand("output/barcode{i}_{locus}_cutadapt_counts.csv", i = i, locus = locus):
-                    out.append(x)
+                out.append(f"output/{exp}/barcode{i}_{locus}_cutadapt_counts.csv")
     return out
 
 rule counts:
