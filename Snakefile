@@ -82,7 +82,7 @@ def everything(wildcards):
                     algos = ['cutadapt']
                 else:
                     raise ValueError("Too many tags: " + tags)
-                for x in expand("output/{exp}_barcode{i}_{locus}_{algo}.fasta",
+                for x in expand("output/{exp}/barcode{i}_{locus}_{algo}.fasta",
                         exp = exp,
                         i = i,
                         locus = locus,
