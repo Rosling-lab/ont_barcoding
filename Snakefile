@@ -110,7 +110,7 @@ wildcard_constraints:
 # generate barcoding tag files for labeled samples
 checkpoint loci_and_primers:
     output:
-        loci = "data/samples/{exp}/barcode{i}/locuslist"
+        loci = "data/{exp}/samples/barcode{i}/locuslist"
     input:
         primers = "tags/primers.fasta",
         config = "samples/{exp}/barcode{i}.xlsx",
