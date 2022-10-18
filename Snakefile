@@ -15,7 +15,7 @@ except FileNotFoundError:
     maxthreads = snakemake.utils.available_cpu_count()
 
 def get_flowcells(wildcards):
-    return [i for i in os.listdir("samples") if os.path.isdir(i) and os.path.exists(os.path.join("data", i, "reads"))]
+    return [i for i in os.listdir("samples") if os.path.isdir(os.path.join("samples", i)) and os.path.exists(os.path.join("data", i, "reads"))]
 
 # input function to get all reads associated with a barcode
 def get_reads(wildcards):
