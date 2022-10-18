@@ -158,7 +158,7 @@ rule demultiplex_cutadapt:
         summary = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.summary",
         demux = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz",
         unknowns = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/unknown.fastq.gz",
-        counts = "output/{exp}_barcode{i}_{locus}_{demux_algo}_counts.csv"
+        counts = "output/{exp}/barcode{i}_{locus}_{demux_algo}_counts.csv"
     input:
         reads = get_reads,
         primers = rules.tags.output.primers_fasta,
