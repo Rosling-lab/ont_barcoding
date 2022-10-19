@@ -430,7 +430,7 @@ rule guppy:
         flowcell_sku=get_flowcell_sku,
         seqkit_sku=get_seqkit_sku,
         fast5_dir="data/{exp}/reads/"
-    log: "logs/{exp}/guppy_hac_{runid}.log"
+    log: "logs/{exp}/guppy_hac_{flowcell}_{runid}.log"
     shell: """
     ont-guppy/bin/guppy_basecaller\\
       -i {params.fast5_dir}\\
