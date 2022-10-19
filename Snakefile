@@ -38,14 +38,14 @@ def get_hac_reads(wildcards):
         runid = get_runids(wildcards.exp))
 
 def get_flowcell_sku(wildcards):
-    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.runid}.txt") as f:
+    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.flowcell}_{wildcards.runid}.txt") as f:
         for l in f.readlines():
             if l.startswith("protocol="):
                 return l.split(":")[1]
         raise ValueError("incomplete summary file:", f)
 
 def get_seqkit_sku(wildcards):
-    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.runid}.txt") as f:
+    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.flowcell}_{wildcards.runid}.txt") as f:
         for l in f.readlines():
             if l.startswith("protocol="):
                 return l.split(":")[2].rstrip("\n")
@@ -423,9 +423,9 @@ rule all_hac:
 
 rule guppy:
     input:
-        final_summary="data/{exp}/reads/final_summary_{runid}.txt",
+        final_summary="data/{exp}/reads/final_summary_{flowcell}_{runid}.txt",
         fast5=get_fast5
-    output: directory("data/{exp}/hac_reads/{runid}")
+    output: directory("data/{exp}/hac_reads/{flowcell}_{runid}")
     params:
         flowcell_sku=get_flowcell_sku,
         seqkit_sku=get_seqkit_sku,
