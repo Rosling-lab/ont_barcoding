@@ -432,6 +432,7 @@ rule guppy:
         fast5_dir="data/{exp}/reads/"
     log: "logs/{exp}/guppy_hac_{flowcell}_{runid}.log"
     shell: """
+    mkdir -p {output}
     ont-guppy/bin/guppy_basecaller\\
       -i {params.fast5_dir}\\
       -r\\
@@ -440,7 +441,7 @@ rule guppy:
       --compress_fastq\\
       --fast5_out false\\
       -s {output}\\
-      -c $(pwd)/../data/dna_r9.4.1_e8.1_hac.cfg --device auto
+      --device auto\\
       --flowcell {params.flowcell_sku}\\
       --kit {params.seqkit_sku}\\
       --verbose_logs\\
