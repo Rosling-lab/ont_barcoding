@@ -193,9 +193,9 @@ rule demultiplex_cutadapt:
         counts = "output/{exp}/barcode{i}_{locus}_{demux_algo}_counts.csv"
     input:
         reads = get_reads,
-        primers = checkpoints.tags.output.primers_fasta,
-        tags = checkpoints.tags.output.tags_fasta,
-        alltags = checkpoints.tags.output
+        primers = rules.tags.output.primers_fasta,
+        tags = rules.tags.output.tags_fasta,
+        alltags = rules.tags.output
     params:
         outdir = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/",
         min_length = get_min_outer_length,
@@ -248,9 +248,9 @@ rule demultiplex_minibar:
         demux = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz"
     input:
         reads = get_reads,
-        tags = checkpoints.tags.output.table,
+        tags = rules.tags.output.table,
         minibar = "scripts/minibar/minibar.py",
-        alltags = checkpoints.tags.output
+        alltags = rules.tags.output
     params:
         outdir = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}",
         temp_fastq = "data/{exp}/reads/barcode{i}/all.fastq.gz"
