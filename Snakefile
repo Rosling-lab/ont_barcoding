@@ -148,7 +148,7 @@ checkpoint loci_and_primers:
     threads: 1
     script: "scripts/loci_and_primers.R"
 
-rule tags:
+checkpoint tags:
     output:
         primers_fasta = "data/{exp}/samples/barcode{i}/{locus}_primers.fasta",
         trim_fasta = "data/{exp}/samples/barcode{i}/{locus}_trim.fasta",
@@ -166,18 +166,22 @@ rule tags:
     script: "scripts/tags.R"
 
 def get_min_outer_length(wildcards):
+    checkpoints.tags.get(exp = wildcards.exp, i = wildcards.i, locus = wildcards.locus)
     with open(f"data/{wildcards.exp}/samples/barcode{wildcards.i}/{wildcards.locus}.lengths") as f:
         return [s.rstrip('\n') for s in f.readlines()][0]
 
 def get_max_outer_length(wildcards):
+    checkpoints.tags.get(exp = wildcards.exp, i = wildcards.i, locus = wildcards.locus)
     with open(f"data/{wildcards.exp}/samples/barcode{wildcards.i}/{wildcards.locus}.lengths") as f:
         return [s.rstrip('\n') for s in f.readlines()][1]
 
 def get_inner_length_center(wildcards):
+    checkpoints.tags.get(exp = wildcards.exp, i = wildcards.i, locus = wildcards.locus)
     with open(f"data/{wildcards.exp}/samples/barcode{wildcards.i}/{wildcards.locus}.lengths") as f:
         return [s.rstrip('\n') for s in f.readlines()][2]
 
 def get_inner_length_width(wildcards):
+    checkpoints.tags.get(exp = wildcards.exp, i = wildcards.i, locus = wildcards.locus)
     with open(f"data/{wildcards.exp}/samples/barcode{wildcards.i}/{wildcards.locus}.lengths") as f:
         return [s.rstrip('\n') for s in f.readlines()][3]
 
