@@ -21,10 +21,31 @@ def get_exps(wildcards):
 def get_reads(wildcards):
     return glob(f"data/{wildcards.exp}/reads/**/barcode{wildcards.i}/*_pass_barcode{wildcards.i}*.fastq.gz", recursive = True)
 
-def get_fast5(wildcards):
-    return glob(f"data/{wildcards.exp}/reads/**/*.fast5")
+def get_runids(exp):
+    return [f[1][0] for f in snakemake.utils.listfiles(f"data/{exp}/reads/final_summary_{{runid}}.txt")]
 
-#./guppy_basecaller -i ../../../data/reads/fast5_pass -q 0 --barcode_nested_output_folder -r -s ../../../data/sup_reads -c $(pwd)/../data/dna_r9.4.1_e8.1_hac.cfg --device auto
+def get_hac_reads(wildcards):
+    return expand(
+        "data/{exp}/hac_reads/{runid}",
+        exp = wildcards.exp,
+        runid = get_runids(wildcards.exp))
+
+def get_flowcell_sku(wildcards):
+    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.runid}.txt") as f:
+        for l in f.readlines():
+            if l.startswith("protocol="):
+                return l.split(":")[1]
+        raise ValueError("incomplete summary file:", f)
+
+def get_seqkit_sku(wildcards):
+    with open(f"data/{wildcards.exp}/reads/final_summary_{wildcards.runid}.txt") as f:
+        for l in f.readlines():
+            if l.startswith("protocol="):
+                return l.split(":")[2].rstrip("\n")
+        raise ValueError("incomplete summary file:", f)
+
+def get_fast5(wildcards):
+    return glob(f"data/{wildcards.exp}/reads/**/{wildcards.flowcell}_*_{wildcards.runid}_*.fast5")
 
 # get the tag files associated with a native barcode and locus (direct call)
 def get_tags_(exp, i, locus):
@@ -385,5 +406,31 @@ rule sintax:
       --tabbedout {output}\\
       --threads {threads}\\
       &>{log}
+    """
+
+rule guppy:
+    input:
+        final_summary="data/{exp}/reads/final_summary_{runid}.txt",
+        fast5=get_fast5
+    output: directory(get_hac_reads)
+    params:
+        flowcell_sku=get_flowcell_sku,
+        seqkit_sku=get_seqkit_sku,
+        fast5_dir="data/{exp}/reads/"
+    log: "logs/{exp}/guppy_hac_{runid}.log"
+    shell: """
+    ont-guppy/bin/guppy_basecaller\\
+      -i {params.fast5_dir}\\
+      -r\\
+      -q 0\\
+      --barcode_nested_output_folder\\
+      --compress_fastq\\
+      --fast5_out false\\
+      -s {output}\\
+      -c $(pwd)/../data/dna_r9.4.1_e8.1_hac.cfg --device auto
+      --flowcell {params.flowcell_sku}\\
+      --kit {params.seqkit_sku}\\
+      --verbose_logs\\
+      >{log}
     """
 
