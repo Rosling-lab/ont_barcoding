@@ -337,11 +337,10 @@ rule all_consensus:
         mkdir -p $(dirname {output})
         mkdir -p $(dirname {log})
         cat {input.consensus} |
-        cutadapt -g file:{input.primers}\\
+        cutadapt -a file:{input.primers}\\
                  --revcomp\\
                  -o -\\
                  -O 10\\
-                 --untrimmed-output /dev/null\\
                  -j {threads}\\
                  - 2>{log} |
         sed 's/ rc$//' >{output}
