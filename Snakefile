@@ -14,8 +14,12 @@ try:
 except FileNotFoundError:
     maxthreads = snakemake.utils.available_cpu_count()
 
-def get_exps(wildcards):
+def get_exps_():
     return [i for i in os.listdir("samples") if os.path.isdir(os.path.join("samples", i)) and os.path.exists(os.path.join("data", i, "reads"))]
+
+
+def get_exps(wildcards):
+    return get_exps_()
 
 # input function to get all reads associated with a barcode
 def get_reads(wildcards):
@@ -23,6 +27,9 @@ def get_reads(wildcards):
 
 def get_runids(exp):
     return [f[1][0] for f in snakemake.utils.listfiles(f"data/{exp}/reads/final_summary_{{runid}}.txt")]
+
+def get_hac_reads_(exp):
+    return expand("data/{exp}/hac_reads/{runid}", exp = exp, runid = get_runids(exp))
 
 def get_hac_reads(wildcards):
     return expand(
@@ -408,11 +415,17 @@ rule sintax:
       &>{log}
     """
 
+def find_runid_dirs(wildcards):
+    return [d for d in get_hac_reads_(exp) for exp in get_exps_()]
+
+rule all_hac:
+    input: find_runid_dirs
+
 rule guppy:
     input:
         final_summary="data/{exp}/reads/final_summary_{runid}.txt",
         fast5=get_fast5
-    output: directory(get_hac_reads)
+    output: directory("data/{exp}/hac_reads/{runid}")
     params:
         flowcell_sku=get_flowcell_sku,
         seqkit_sku=get_seqkit_sku,
