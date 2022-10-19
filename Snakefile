@@ -416,7 +416,7 @@ rule sintax:
     """
 
 def find_runid_dirs(wildcards):
-    return [d for d in get_hac_reads_(exp) for exp in get_exps_()]
+    return [d for exp in get_exps_() for d in get_hac_reads_(exp)]
 
 rule all_hac:
     input: find_runid_dirs
