@@ -159,7 +159,8 @@ checkpoint tags:
         tags = get_tags,
         primers = "tags/primers.fasta",
         config = "samples/{exp}/barcode{i}.xlsx",
-        script = "scripts/tags.R"
+        script = "scripts/tags.R",
+        loci = rules.loci_and_primers.output
     envmodules: "R_packages/4.1.1"
     conda: "conda/tags.yaml"
     threads: 1
@@ -283,7 +284,9 @@ rule consensus:
     output:
         cluster_map = "data/{exp}/consensus/barcode{i}/{locus}/{demux_algo}/{sample}/final_clusters.tsv",
         consensus = "data/{exp}/consensus/barcode{i}/{locus}/{demux_algo}/{sample}/consensus.fasta"
-    input: "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz"
+    input:
+        fastq = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz",
+        tags = rules.tags.output
     params:
         outdir = "data/{exp}/consensus/barcode{i}/{locus}/{demux_algo}/{sample}",
         filtered = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/{sample}.fastq",
@@ -297,7 +300,7 @@ rule consensus:
         """
         mkdir -p {params.outdir}
         mkdir -p $(dirname {log})
-        vsearch --fastx_getseqs {input}\\
+        vsearch --fastx_getseqs {input.fastq}\\
                 --fastqout {params.filtered}\\
                 --label '{params.sample_label}'\\
                 --label_substr_match\\
