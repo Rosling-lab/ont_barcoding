@@ -24,10 +24,11 @@ if (exists("snakemake")) {
   # input files
   tagfiles <- c("tags/3NDf-tag.fasta", "tags/LR5-tag.fasta", "tags/ITS1-tag.fasta")
   primerfile <- "tags/primers.fasta"
-  configfile <- "samples/barcode01.xlsx"
+  configfile <- "samples/mycoweek2022/barcode12.xlsx"
 
   # parameters
   basename <- sub("\\.xlsx$", "", basename(configfile))
+  expname <- basename(dirname(configfile))
   locus <- "rDNA"
 
   # output files

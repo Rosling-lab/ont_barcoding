@@ -9,10 +9,11 @@ if (exists("snakemake")) {
   primerfile <- snakemake@input$primers
   locuslist <- snakemake@output$loci
 } else {
-  configfile <- "samples/barcode01.xlsx"
+  configfile <- "samples/mycoweek2022/barcode12.xlsx"
   primerfile <- "tags/primers.fasta"
   basename <- sub("\\.xlsx$", "", basename(configfile))
-  locuslist <- file.path("data", "samples", basename, "locuslist")
+  expname <- basename(dirname(configfile))
+  locuslist <- file.path("data", expname, "samples", basename, "locuslist")
 }
 
 primers <- Biostrings::readDNAStringSet(primerfile)
@@ -73,8 +74,24 @@ if (any(missing_sheets)) {
 
 # write the names of the loci
 outdir <- dirname(locuslist)
-if (!dir.exists(outdir)) dir.create(outdir)
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 writeLines(loci$`Locus name`, locuslist)
+
+metadata_sheet <- grep("metadata", sheets, ignore.case = TRUE, value = TRUE)
+if (length(metadata_sheet) > 1) {
+  stop("Multiple sheets seem to contain metadata: ", paste(metadata_sheet, collapse = ", "))
+} else if (length(metadata_sheet) == 1) {
+  metadata <- readxl::read_xlsx(
+    configfile,
+    sheet = metadata_sheet
+  ) %>%
+    dplyr::rename(sample = 1) %>%
+    tidyr::unite("metadata", -1) %>%
+    tidyr::unite("long_sample", everything(), remove = FALSE) %>%
+    dplyr::select(sample, long_sample)
+} else {
+  metadata <- tibble::tibble(sample = character(), long_sample = character())
+}
 
 # write the names of the primers and samples for each locus
 # snakemake will use these to get dependencies for future steps
@@ -84,11 +101,22 @@ for (i in seq_len(nrow(loci))) {
     mytags,
     file.path(outdir, sprintf("%s.primerlist", loci$`Locus name`[i]))
   )
-  readxl::read_xlsx(configfile, loci$`Locus name`[i], col_types = "text") %>%
-    tibble::column_to_rownames(1) %>%
+  samplelist_file <- file.path(outdir, sprintf("%s.samplelist", loci$`Locus name`[i]))
+  readxl::read_xlsx(
+    configfile,
+    sheet = loci$`Locus name`[i],
+    range = "B2:M9",
+    col_names = as.character(1:12),
+    col_types = "text"
+  ) %>%
     unlist() %>%
     na.omit() %>%
-    writeLines(
-      file.path(outdir, sprintf("%s.samplelist", loci$`Locus name`[i]))
+    tibble::tibble(sample = .) %>%
+    dplyr::left_join(metadata, by = "sample") %>%
+    dplyr::mutate(long_sample = dplyr::coalesce(long_sample, sample)) %>%
+    readr::write_tsv(
+      samplelist_file,
+      col_names = FALSE,
+      na = ""
     )
 }

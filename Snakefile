@@ -85,6 +85,18 @@ def get_samples_(exp, i, locus):
 def get_samples(wildcards):
     return get_samples_(wildcards.exp, wildcards.i, wildcards.locus)
 
+# get the long sample name (including metadata) associated with a particular sample (direct call)
+def get_long_sample_name_(exp, i, locus, sample):
+    with open(f"data/{exp}/samples/barcode{i}/{locus}.samplelist") as f:
+        for s in f.readlines():
+            s2 = s.rstrip('\n').split('\t')
+            if s2[0] == sample : return s2[1]
+        return sample
+
+# get the long sample name (including metadata) associated with a particular sample (input function)
+def get_long_sample_name(wildcards):
+    return get_long_sample_name_(wildcards.exp, wildcards.i, wildcards.locus, wildcards.sample)
+
 # get the consensus files associated with a native barcode, locus, and demultiplexing algorithm (input function)
 def get_consensus(wildcards):
     samples = get_samples(wildcards)
@@ -291,6 +303,7 @@ rule consensus:
         outdir = "data/{exp}/consensus/barcode{i}/{locus}/{demux_algo}/{sample}",
         filtered = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/{sample}.fastq",
         sample_label = "sample:{sample};",
+        long_sample_name = get_long_sample_name,
         center_length = get_inner_length_center,
         length_window = get_inner_length_width
     log: "logs/{exp}/consensus_barcode{i}_{locus}_{demux_algo}/{sample}.log"
@@ -320,7 +333,7 @@ rule consensus:
         touch "{output.consensus}"
         touch "{output.cluster_map}"
         for f in $(find {params.outdir} -path '*racon_cl_id_*/consensus.fasta') ; do
-            sed -r 's/>consensus_cl_id(_[0-9]+)_total_supporting_reads_([0-9]+) .+/>{wildcards.sample}\\1_(\\2x_coverage)/' <"$f" >>"{output.consensus}"
+            sed -r 's/>consensus_cl_id(_[0-9]+)_total_supporting_reads_([0-9]+) .+/>{params.long_sample_name}\\1_(\\2x_coverage)/' <"$f" >>"{output.consensus}"
         done
         rm {params.filtered}
         """
