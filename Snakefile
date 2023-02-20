@@ -79,7 +79,7 @@ def get_loci(wildcards):
 def get_samples_(exp, i, locus):
     checkpoints.loci_and_primers.get(exp = exp, i = i)
     with open(f"data/{exp}/samples/barcode{i}/{locus}.samplelist") as f:
-        return [s.rstrip('\n') for s in f.readlines()]
+        return [s.rstrip('\n').split('\t')[0] for s in f.readlines()]
 
 # get the samples associated with a native barcode and locus (input function)
 def get_samples(wildcards):
@@ -90,7 +90,11 @@ def get_long_sample_name_(exp, i, locus, sample):
     with open(f"data/{exp}/samples/barcode{i}/{locus}.samplelist") as f:
         for s in f.readlines():
             s2 = s.rstrip('\n').split('\t')
-            if s2[0] == sample : return s2[1]
+            if s2[0] == sample :
+                if len(s2) >= 2 :
+                    return s2[1]
+                else:
+                    return s2[0]
         return sample
 
 # get the long sample name (including metadata) associated with a particular sample (input function)
