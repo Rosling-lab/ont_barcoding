@@ -132,6 +132,18 @@ def everything(wildcards):
                         locus = locus,
                         algo = algos):
                     out.append(x)
+                subloci = []
+                if locus == 'ITS':
+                    subloci = ['ITS']
+                elif locus == 'rDNA':
+                    subloci = ['ITS', 'LSU']
+                for x in expand("output/{exp}/barcode{i}_{locus}_{algo}_{sublocus}_sintax.tsv",
+                                exp = exp,
+                                i = i,
+                                locus = locus,
+                                algo = algos,
+                                sublocus = subloci):
+                    out.append(x)
     return out
 
 rule all:
