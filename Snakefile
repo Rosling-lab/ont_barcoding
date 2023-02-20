@@ -176,7 +176,7 @@ checkpoint tags:
         primers = "tags/primers.fasta",
         config = "samples/{exp}/barcode{i}.xlsx",
         script = "scripts/tags.R",
-        loci = rules.loci_and_primers.output
+        loci = "data/{exp}/samples/barcode{i}/locuslist"
     envmodules: "R_packages/4.1.1"
     conda: "conda/tags.yaml"
     threads: 1
