@@ -10,6 +10,7 @@ dependencies:
   - r-dplyr
   - r-tidyr
   - r-readxl
+  - r-readr
   - r-purrr
   - bioconductor-biostrings
   - bioconductor-biobase
