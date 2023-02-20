@@ -87,7 +87,7 @@ if (length(metadata_sheet) > 1) {
   ) %>%
     dplyr::rename(sample = 1) %>%
     tidyr::unite("metadata", -1) %>%
-    tidyr::unite("long_sample", everything(), remove = FALSE) %>%
+    tidyr::unite("long_sample", everything(), remove = FALSE, sep = " ") %>%
     dplyr::select(sample, long_sample)
 } else {
   metadata <- tibble::tibble(sample = character(), long_sample = character())

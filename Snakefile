@@ -343,7 +343,9 @@ rule consensus:
         """
 
 rule all_consensus:
-    output: "output/{exp}/barcode{i}_{locus}_{demux_algo}.fasta"
+    output:
+        long="output/{exp}/barcode{i}_{locus}_{demux_algo}.fasta",
+        short="output/{exp}/barcode{i}_{locus}_{demux_algo}_short.fasta"
     wildcard_constraints:
         demux_algo = "(cutadapt|minibar)"
     input:
@@ -363,11 +365,12 @@ rule all_consensus:
                  -O 10\\
                  -j {threads}\\
                  - 2>{log} |
-        sed 's/ rc$//' >{output}
+        sed 's/ rc$//' >{output.long}
+        sed 's/ .*//' {output.long} >{output.short}
         """
 
 rule itsx:
-    input: "output/{exp}/barcode{i}_{locus}_{demux_algo}.fasta"
+    input: "output/{exp}/barcode{i}_{locus}_{demux_algo}_short.fasta"
     wildcard_constraints:
         demux_algo = "(cutadapt|minibar)"
     output:
