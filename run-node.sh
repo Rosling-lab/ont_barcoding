@@ -1,10 +1,9 @@
 #!/bin/bash -l
-
-#SBATCH -A snic2022-5-42
-#SBATCH -p node
-#SBATCH -N 1
-#SBATCH -t 0:20:00
-#SBATCH -J ont_barcoding
+#SBATCH -A naiss2023-5-37
+#SBATCH -p core
+#SBATCH -n 4
+#SBATCH -t 10:00:00
+#SBATCH -J ont_barcoding_2023
 #SBATCH -C usage_mail
 #SBATCH -M rackham
 #SBATCH --mail-type=ALL
