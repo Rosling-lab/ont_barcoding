@@ -397,20 +397,26 @@ rule itsx:
     threads: 4
     shell: """
     mkdir -p $(dirname {log})
-    ITSx\\
-        -i {input}\\
-        -o {params.prefix}\\
-        -t "."\\
-        --cpu {threads}\\
-        --complement F\\
-        --save_regions LSU,SSU\\
-        --graphical F\\
-        --preserve T\\
-        --positions F\\
-        --summary F\\
-        --not_found F\\
-        >{log}
-    mv {params.fullfile} {output.ITS}
+    if [ -s {input} ]
+    then
+      ITSx\\
+          -i {input}\\
+          -o {params.prefix}\\
+          -t "."\\
+          --cpu {threads}\\
+          --complement F\\
+          --save_regions LSU,SSU\\
+          --graphical F\\
+          --preserve T\\
+          --positions F\\
+          --summary F\\
+          --not_found F\\
+          >{log}
+      mv {params.fullfile} {output.ITS}
+    else
+      touch {output}
+      echo "no input sequences found" >{log}
+    fi
     """
 
 rule download_reunite_rdp_lsu:
