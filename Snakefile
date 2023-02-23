@@ -421,6 +421,7 @@ rule itsx:
 
 rule download_reunite_rdp_lsu:
     output: "references/rdp_train.LSU.sintax.fasta.gz"
+    conda: "conda/wget.yaml"
     shell: """
     mkdir -p references
     wget -O {output} https://github.com/brendanf/reUnite/releases/download/v0.1/rdp_train.LSU.sintax.fasta.gz
@@ -428,6 +429,7 @@ rule download_reunite_rdp_lsu:
 
 rule download_reunite_unite_its:
     output: "references/unite.ITS.sintax.fasta.gz"
+    conda: "conda/wget.yaml"
     shell: """
     mkdir -p references
     wget -O {output} https://github.com/brendanf/reUnite/releases/download/v0.1/unite.ITS.sintax.fasta.gz
