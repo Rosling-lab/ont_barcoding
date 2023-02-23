@@ -303,7 +303,7 @@ rule demultiplex_minibar:
                    -S\\
                    -fh
         done 2>{log} |
-        sed -r 's/^(@.+) [Hhx][+-]?\\([-, 0-9]+\\), ?[Hhx][+-]?\\([-, 0-9]+\\) (.+)$/\\1 sample:\\2;/' |
+        sed 's/^\\(@..*\\) [Hhx][+-]*([-, 0-9]\\{1,\\}), *[Hhx][+-]*([-, 0-9]\\{1,\\}) \\(.*\\)$/\\1 sample:\\2;/' |
         gzip -c - >{output.demux}
         cp {log} {output.summary}
         """
@@ -349,7 +349,7 @@ rule consensus:
         touch "{output.consensus}"
         touch "{output.cluster_map}"
         for f in $(find {params.outdir} -path '*racon_cl_id_*/consensus.fasta') ; do
-            sed -r 's/>consensus_cl_id(_[0-9]+)_total_supporting_reads_([0-9]+) .+/>{params.long_sample_name}\\1_(\\2x_coverage)/' <"$f" >>"{output.consensus}"
+            sed 's/>consensus_cl_id\\(_[0-9]*\\)_total_supporting_reads_\\([0-9]*\\) .*/>{params.long_sample_name}\\1_(\\2x_coverage)/' <"$f" >>"{output.consensus}"
         done
         rm {params.filtered}
         """
