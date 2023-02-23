@@ -16,3 +16,4 @@ snakemake -pr --jobs $SLURM_JOB_CPUS_PER_NODE\
     --use-conda\
     --conda-frontend conda\
     --shadow-prefix /scratch
+chmod -R g+rwX .snakemake/metadata &>/dev/null
