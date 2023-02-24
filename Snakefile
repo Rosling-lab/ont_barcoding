@@ -303,7 +303,7 @@ rule demultiplex_minibar:
                    -S\\
                    -fh
         done 2>{log} |
-        sed 's/^\\(@..*\\) [Hhx][+-]*([-, 0-9]\\{1,\\}), *[Hhx][+-]*([-, 0-9]\\{1,\\}) \\(.*\\)$/\\1 sample:\\2;/' |
+        sed 's/^\\(@..*\\) [Hhx][+-]*([-, 0-9]\\{{1,\\}}), *[Hhx][+-]*([-, 0-9]\\{{1,\\}}) \\(.*\\)$/\\1 sample:\\2;/' |
         gzip -c - >{output.demux}
         cp {log} {output.summary}
         """
