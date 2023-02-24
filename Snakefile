@@ -368,7 +368,7 @@ rule all_consensus:
     log: "logs/{exp}/consensus_barcode{i}_{locus}_{demux_algo}.log"
     shell:
         """
-        mkdir -p $(dirname {output})
+        mkdir -p $(dirname {output.long})
         mkdir -p $(dirname {log})
         cat {input.consensus} |
         cutadapt -a file:{input.primers}\\
