@@ -336,8 +336,8 @@ writeLines(
   c(
     locus$`Min length` + fwd_length + rev_length, # min length with primers
     locus$`Max length` + fwd_length + rev_length + 200, # max length with primers
-    (locus$`Min length` + locus$`Max length`) %/% 2L, # central length without primers
-    (locus$`Max length` - locus$`Min length`) %/% 2L # deviation of length without primers
+    (locus$`Min length` + locus$`Max length`) %/% 2L + fwd_length + rev_length + 100L, # central length without primers
+    (locus$`Max length` - locus$`Min length`) %/% 2L + fwd_length + rev_length + 100L # deviation of length without primers
   ) %>%
     as.character(),
   length_file
