@@ -378,7 +378,7 @@ rule all_consensus:
                  -j {threads}\\
                  - 2>{log} |
         sed 's/ rc$//' >{output.long}
-        cat {input.consensus} | sed 's/ .*\\(_[0-9][0-9]*\\)_([0-9][0-9]*_coverage)/\\1/' >{output.short}
+        cat {input.consensus} | sed 's/ .*\\(_[0-9][0-9]*\\)_([0-9][0-9]*x_coverage)/\\1/' >{output.short}
         """
 
 rule itsx:
