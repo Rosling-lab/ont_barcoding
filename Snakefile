@@ -1,6 +1,5 @@
 # Snakemake workflow file
 # This workflow demultiplexes custom "inner" barcodes from MinION plates.
-# The intention is for "quick" checks during sequencing runs.
 import os
 import subprocess
 from glob import glob
@@ -146,8 +145,34 @@ def everything(wildcards):
                     out.append(x)
     return out
 
+def fastq_per_sample(wildcards):
+    out = []
+    for exp in get_exps_():
+        print(f"experiment {exp}:\n") 
+        for i in [x[1][0] for x in snakemake.utils.listfiles(f"samples/{exp}/barcode{{i}}.xlsx")]:
+            for locus in get_loci_(exp, i):
+                tags = get_tags_(exp, i, locus)
+                if len(tags) == 2:
+                    algos = ['cutadapt', 'minibar']
+                elif len(tags) == 1:
+                    algos = ['cutadapt']
+                else:
+                    raise ValueError("Too many tags: " + tags)
+                for algo in algos:
+                    for x in expand("data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/samples/{sample}.fastq.gz",
+                                    exp = exp,
+                                    i = i,
+                                    locus = locus,
+                                    demux_algo = algo,
+                                    sample = get_samples_(exp, i, locus)):
+                        out.append(x)
+    return out
+
 rule all:
     input: everything
+
+rule all_fastq:
+    input: fastq_per_sample
 
 def demux_counts(wildcards):
     out = []
@@ -306,6 +331,34 @@ rule demultiplex_minibar:
         sed 's/^\\(@..*\\) [Hhx][+-]*([-, 0-9]\\{{1,\\}}), *[Hhx][+-]*([-, 0-9]\\{{1,\\}}) \\(.*\\)$/\\1 sample:\\2;/' |
         gzip -c - >{output.demux}
         cp {log} {output.summary}
+        """
+
+rule raw_demux:
+    output: "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/samples/{sample}.fastq.gz"
+    input:
+        fastq = "data/{exp}/demultiplex/barcode{i}/{locus}/{demux_algo}/barcode{i}.fastq.gz",
+        tags = rules.tags.output.trim_fasta
+    params:
+        sample_label = "sample:{sample};"
+    threads: maxthreads
+    log: "logs/{exp}/rawfastq_barcode{i}_{locus}_{demux_algo}/{sample}.log"
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        mkdir -p $(dirname {log})
+        vsearch --fastx_getseqs {input.fastq}\\
+                --fastqout {params.filtered}\\
+                --label '{params.sample_label}'\\
+                --label_substr_match\\
+                --notrunclabels &>{log} |
+        cutadapt -a file:{input.tags}\\
+                 --revcomp\\
+                 -o -\\
+                 -O 10\\
+                 -j {threads}\\
+                 - 2>{log} |
+        sed 's/ rc$//' |
+        gzip -c - >{output}
         """
 
 rule consensus:
