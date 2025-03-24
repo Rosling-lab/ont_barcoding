@@ -390,8 +390,7 @@ rule consensus:
         NGSpeciesID\\
           --ont\\
           --consensus\\
-          --racon\\
-          --racon_iter 3\\
+          --medaka\\
           --fastq {params.filtered}\\
           --outfolder {params.outdir}\\
           --m {params.center_length}\\
